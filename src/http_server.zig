@@ -75,6 +75,8 @@ pub const HttpServer = struct {
             try self.handleHttpWrite(client_fd, request);
         } else if (std.mem.startsWith(u8, request, "GET /api/query")) {
             try self.handleHttpQuery(client_fd, request);
+        } else if (std.mem.startsWith(u8, request, "POST /api/resolve")) {
+            try self.handleHttpResolve(client_fd, request);
         } else if (std.mem.startsWith(u8, request, "GET /api/stats")) {
             try self.handleHttpStats(client_fd);
         } else if (std.mem.startsWith(u8, request, "OPTIONS ")) {
@@ -155,6 +157,32 @@ pub const HttpServer = struct {
         try json.appendSlice(self.allocator, "]}");
 
         try sendJson(client_fd, json.items);
+    }
+
+    fn handleHttpResolve(self: *const HttpServer, client_fd: c_int, request: []const u8) !void {
+        const body_sep = std.mem.indexOf(u8, request, "\r\n\r\n") orelse {
+            try sendJson(client_fd, "{\"status\":\"error\",\"msg\":\"missing body\"}");
+            return;
+        };
+        const body = request[body_sep + 4 ..];
+
+        const parsed = try self.engine.parseLineProtocol(body);
+        if (parsed) |p| {
+            defer {
+                self.allocator.free(p.key.metric);
+                for (p.key.tags) |tag| {
+                    self.allocator.free(tag.key);
+                    self.allocator.free(tag.value);
+                }
+                self.allocator.free(p.key.tags);
+            }
+            const sid = p.key.computeId();
+            var resp_buf: [256]u8 = undefined;
+            const resp = try std.fmt.bufPrint(&resp_buf, "{{\"status\":\"ok\",\"series_id\":{d}}}", .{sid});
+            try sendJson(client_fd, resp);
+        } else {
+            try sendJson(client_fd, "{\"status\":\"error\",\"msg\":\"parse failed\"}");
+        }
     }
 
     fn handleHttpStats(self: *const HttpServer, client_fd: c_int) !void {

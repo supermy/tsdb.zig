@@ -307,7 +307,11 @@
         <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series ID</label>
-            <input id="query-series" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="写入后复制 Series ID 填入此处">
+            <div class="flex gap-2">
+              <input id="query-series" type="text" class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="写入后复制 Series ID 填入此处，或输入 metric,tag=value 格式">
+              <button onclick="resolveSeriesId()" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">解析</button>
+            </div>
+            <div id="query-resolved" class="hidden mt-1 text-xs text-emerald-600 dark:text-emerald-400"></div>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time (ns, optional)</label>
@@ -901,9 +905,62 @@
       // fallback: use a hardcoded sample ID
       document.getElementById('query-series').value = '0';
     }
+    async function resolveSeriesId() {
+      const input = document.getElementById('query-series').value.trim();
+      if (!input) return alert('请输入序列 ID 或 metric,tag=value 格式');
+      // 如果已经是纯数字，无需解析
+      if (/^\d+$/.test(input)) {
+        document.getElementById('query-resolved').textContent = '已是数字 Series ID';
+        show(document.getElementById('query-resolved'));
+        return;
+      }
+      try {
+        const res = await fetch('/api/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          mode: 'cors',
+          body: input + ' v=0'
+        });
+        const data = await res.json();
+        if (data && data.status === 'ok' && data.series_id) {
+          document.getElementById('query-series').value = String(data.series_id);
+          document.getElementById('query-resolved').textContent = '已解析为 Series ID: ' + data.series_id;
+          show(document.getElementById('query-resolved'));
+        } else {
+          document.getElementById('query-resolved').textContent = '解析失败：' + (data.msg || 'unknown');
+          document.getElementById('query-resolved').className = 'mt-1 text-xs text-red-600 dark:text-red-400';
+          show(document.getElementById('query-resolved'));
+        }
+      } catch (e) {
+        document.getElementById('query-resolved').textContent = '解析请求失败: ' + e.message;
+        document.getElementById('query-resolved').className = 'mt-1 text-xs text-red-600 dark:text-red-400';
+        show(document.getElementById('query-resolved'));
+      }
+    }
+
     async function doQuery() {
-      const series = document.getElementById('query-series').value.trim();
+      let series = document.getElementById('query-series').value.trim();
       if (!series) return alert('请输入序列 ID');
+      // 自动解析非数字输入
+      if (!/^\d+$/.test(series)) {
+        try {
+          const res = await fetch('/api/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            mode: 'cors',
+            body: series + ' v=0'
+          });
+          const data = await res.json();
+          if (data && data.status === 'ok' && data.series_id) {
+            series = String(data.series_id);
+            document.getElementById('query-series').value = series;
+          } else {
+            return alert('无法解析 Series ID: ' + (data.msg || series));
+          }
+        } catch (e) {
+          return alert('解析 Series ID 失败: ' + e.message);
+        }
+      }
       let start = document.getElementById('query-start').value.trim();
       let end = document.getElementById('query-end').value.trim();
       if (!start) start = '0';
