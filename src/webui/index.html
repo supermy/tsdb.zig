@@ -212,6 +212,11 @@
               <span id="write-status-icon"></span>
               <span id="write-status" class="font-medium text-sm"></span>
             </div>
+            <div id="write-series-row" class="hidden mb-2 flex items-center gap-2">
+              <span class="text-xs text-gray-500 dark:text-gray-400">Series ID:</span>
+              <code id="write-series-id" class="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-primary-600 dark:text-primary-400"></code>
+              <button onclick="copySeriesToQuery()" class="text-xs px-2 py-1 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">填入查询框</button>
+            </div>
             <pre id="write-output" class="font-mono text-xs bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-auto max-h-60 border border-gray-200 dark:border-gray-700"></pre>
           </div>
         </div>
@@ -277,6 +282,11 @@
               <span id="batch-status-icon"></span>
               <span id="batch-status" class="font-medium text-sm"></span>
             </div>
+            <div id="batch-series-row" class="hidden mb-2 flex items-center gap-2">
+              <span class="text-xs text-gray-500 dark:text-gray-400">Series ID:</span>
+              <code id="batch-series-id" class="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-primary-600 dark:text-primary-400"></code>
+              <button onclick="copyBatchSeriesToQuery()" class="text-xs px-2 py-1 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">填入查询框</button>
+            </div>
             <pre id="batch-output" class="font-mono text-xs bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-auto max-h-40 border border-gray-200 dark:border-gray-700"></pre>
           </div>
         </div>
@@ -290,11 +300,14 @@
         Query Test
       </h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">按序列 ID 和时间范围查询数据。起始时间和结束时间留空则查询全部数据。</p>
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-3 text-xs text-yellow-800 dark:text-yellow-300">
+        <strong>提示：</strong>Series ID 由 metric + 所有 tags 共同哈希决定。插入和查询时必须使用完全相同的 tags 组合，否则查询不到数据。建议写入后直接复制返回的 Series ID 进行查询。
+      </div>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series ID</label>
-            <input id="query-series" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="cpu,host=server01">
+            <input id="query-series" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="写入后复制 Series ID 填入此处">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time (ns, optional)</label>
@@ -590,6 +603,16 @@
       document.getElementById('write-input').value = '';
       hide(document.getElementById('write-result'));
       hide(document.getElementById('write-latency'));
+      hide(document.getElementById('write-series-row'));
+      document.getElementById('write-series-id').textContent = '';
+    }
+
+    function copySeriesToQuery() {
+      const sid = document.getElementById('write-series-id').textContent;
+      if (sid) {
+        document.getElementById('query-series').value = sid;
+        document.getElementById('query-series').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
 
     function insertPreset(type) {
@@ -637,8 +660,10 @@
         const text = await res.text();
         let data;
         try { data = JSON.parse(text); } catch { data = null; }
+        let seriesId = '';
         if (data && data.status === 'ok' && data.written) {
           okCount = data.written;
+          if (data.series_id) seriesId = String(data.series_id);
         } else {
           failCount = lines.length;
         }
@@ -650,6 +675,12 @@
         document.getElementById('write-status-icon').innerHTML = statusIcon(ok);
         document.getElementById('write-status').textContent = `${lines.length} 行：${okCount} 条成功，${failCount} 条失败`;
         document.getElementById('write-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
+        if (seriesId) {
+          document.getElementById('write-series-id').textContent = seriesId;
+          show(document.getElementById('write-series-row'));
+        } else {
+          hide(document.getElementById('write-series-row'));
+        }
         document.getElementById('write-output').textContent = `总数: ${lines.length}\n成功: ${okCount}\n失败: ${failCount}\n总延迟: ${totalLatency} ms\n平均延迟: ${avgLatency} ms`;
         document.getElementById('write-latency').querySelector('span').textContent = `${totalLatency} ms (平均 ${avgLatency} ms)`;
         show(document.getElementById('write-latency'));
@@ -691,16 +722,23 @@
           mode: 'cors',
           body: line
         });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
         const latency = Math.round(performance.now() - start);
-        const ok = res.ok;
+        const ok = res.ok && data && data.status === 'ok';
         show(result);
         result.className = 'mt-2 text-xs ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
-        result.textContent = ok ? `Quick write OK (${res.status}) in ${latency} ms` : `Quick write failed (${res.status})`;
+        if (ok && data.series_id) {
+          result.innerHTML = `快速写入成功 (${res.status})，耗时 ${latency} ms。Series ID: <code class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">${data.series_id}</code> <button onclick="document.getElementById('query-series').value='${data.series_id}';document.getElementById('query-series').scrollIntoView({behavior:'smooth',block:'center'});" class="underline hover:no-underline">填入查询框</button>`;
+        } else {
+          result.textContent = ok ? `快速写入成功 (${res.status})，耗时 ${latency} ms` : `快速写入失败 (${res.status})`;
+        }
         if (ok) pushPerf('write', latency);
       } catch (e) {
         show(result);
         result.className = 'mt-2 text-xs text-red-600 dark:text-red-400';
-        result.textContent = 'Network Error: ' + e.message;
+        result.textContent = '网络错误: ' + e.message;
       } finally {
         btn.disabled = false;
       }
@@ -742,6 +780,8 @@
       batchLines = [];
       hide(document.getElementById('batch-progress-area'));
       hide(document.getElementById('batch-result'));
+      hide(document.getElementById('batch-series-row'));
+      document.getElementById('batch-series-id').textContent = '';
       updateBatchProgress(0, 0, 0, 0, 0);
     }
 
@@ -771,6 +811,7 @@
 
       let written = 0;
       let failed = 0;
+      let seriesId = '';
       const start = performance.now();
       const total = lines.length;
 
@@ -787,6 +828,7 @@
         try { data = JSON.parse(text); } catch { data = null; }
         if (data && data.status === 'ok' && data.written) {
           written = data.written;
+          if (data.series_id) seriesId = String(data.series_id);
         } else {
           failed = total;
         }
@@ -803,8 +845,22 @@
       document.getElementById('batch-status-icon').innerHTML = statusIcon(ok);
       document.getElementById('batch-status').textContent = ok ? `批量写入完成：${written} 条成功` : `批量写入完成：${written} 条成功，${failed} 条失败`;
       document.getElementById('batch-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
+      if (seriesId) {
+        document.getElementById('batch-series-id').textContent = seriesId;
+        show(document.getElementById('batch-series-row'));
+      } else {
+        hide(document.getElementById('batch-series-row'));
+      }
       document.getElementById('batch-output').textContent = `总数: ${total}\n成功: ${written}\n失败: ${failed}\n耗时: ${elapsedTotal.toFixed(2)}秒\n吞吐: ${(elapsedTotal > 0 ? Math.round(total / elapsedTotal) : 0)} 条/秒`;
       btn.disabled = false;
+    }
+
+    function copyBatchSeriesToQuery() {
+      const sid = document.getElementById('batch-series-id').textContent;
+      if (sid) {
+        document.getElementById('query-series').value = sid;
+        document.getElementById('query-series').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
 
     // ===================== Query =====================
