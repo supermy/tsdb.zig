@@ -1,0 +1,23 @@
+# Zig
+.zig-cache/
+zig-out/
+zig-*
+
+# Build artifacts
+*.o
+*.obj
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test data
+tmp_test_*
+data/
