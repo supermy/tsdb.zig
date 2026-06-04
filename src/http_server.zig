@@ -93,23 +93,44 @@ pub const HttpServer = struct {
         };
         const body = request[body_sep + 4 ..];
 
-        const parsed = try self.engine.parseLineProtocol(body);
-        if (parsed) |p| {
-            defer {
-                self.allocator.free(p.key.metric);
-                for (p.key.tags) |tag| {
-                    self.allocator.free(tag.key);
-                    self.allocator.free(tag.value);
+        // 支持批量写入：按换行拆分，逐行解析写入
+        var total_written: u32 = 0;
+        var last_sid: u64 = 0;
+        var lines = std.mem.splitScalar(u8, body, '\n');
+        while (lines.next()) |raw_line| {
+            const line = std.mem.trim(u8, raw_line, " \r\t");
+            if (line.len == 0) continue;
+
+            const parsed = self.engine.parseLineProtocol(line) catch |err| {
+                const srv_log = std.log.scoped(.http);
+                srv_log.err("parse error: {s}", .{@errorName(err)});
+                continue;
+            };
+            if (parsed) |p| {
+                defer {
+                    self.allocator.free(p.key.metric);
+                    for (p.key.tags) |tag| {
+                        self.allocator.free(tag.key);
+                        self.allocator.free(tag.value);
+                    }
+                    self.allocator.free(p.key.tags);
                 }
-                self.allocator.free(p.key.tags);
+                last_sid = p.key.computeId();
+                self.engine.write(p.key, p.point) catch |err| {
+                    const srv_log = std.log.scoped(.http);
+                    srv_log.err("write error: {s}", .{@errorName(err)});
+                    continue;
+                };
+                total_written += 1;
             }
-            const sid = p.key.computeId();
-            try self.engine.write(p.key, p.point);
+        }
+
+        if (total_written > 0) {
             var resp_buf: [256]u8 = undefined;
-            const resp = try std.fmt.bufPrint(&resp_buf, "{{\"status\":\"ok\",\"written\":1,\"series_id\":{d}}}", .{sid});
+            const resp = try std.fmt.bufPrint(&resp_buf, "{{\"status\":\"ok\",\"written\":{d},\"series_id\":{d}}}", .{ total_written, last_sid });
             try sendJson(client_fd, resp);
         } else {
-            try sendJson(client_fd, "{\"status\":\"error\",\"msg\":\"parse failed\"}");
+            try sendJson(client_fd, "{\"status\":\"error\",\"msg\":\"no valid lines written\"}");
         }
     }
 

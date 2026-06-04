@@ -93,7 +93,7 @@
             <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             Server Stats
           </h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time server statistics showing partition and storage state.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">实时显示服务器分区状态与存储信息。</p>
         </div>
         <div class="flex items-center gap-3">
           <button onclick="exportStats()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
@@ -149,7 +149,7 @@
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
         Write Test
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Write single or multiple InfluxDB line protocol data points. Use presets for quick examples.</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">写入单条或多条 InfluxDB Line Protocol 数据。点击预设按钮可快速插入示例数据。</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-gray-800/50 flex flex-wrap gap-2">
           <span class="text-xs font-medium text-gray-500 dark:text-gray-400 self-center mr-1">Presets:</span>
@@ -224,7 +224,7 @@
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
         Batch Write Test
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Generate and write large batches of simulated time-series data.</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">生成并批量写入模拟时序数据。可自定义序列数量与每序列点数，默认 1000 条。</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -237,7 +237,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Points / Series</label>
-            <input id="batch-points" type="number" value="500" min="1" max="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+            <input id="batch-points" type="number" value="200" min="1" max="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Range (hours)</label>
@@ -289,7 +289,7 @@
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         Query Test
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Query data by series ID and time range. Leave time fields empty to query all data.</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">按序列 ID 和时间范围查询数据。起始时间和结束时间留空则查询全部数据。</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -364,7 +364,7 @@
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
         Import / Export
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Import data from files or export query results.</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">从文件导入 Line Protocol 数据，或导出查询结果到本地。</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Import -->
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5">
@@ -618,30 +618,29 @@
 
     async function doWrite() {
       const input = document.getElementById('write-input').value.trim();
-      if (!input) return alert('Please enter InfluxDB line protocol data');
+      if (!input) return alert('请输入 InfluxDB Line Protocol 数据');
       const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      if (!lines.length) return alert('Please enter InfluxDB line protocol data');
+      if (!lines.length) return alert('请输入 InfluxDB Line Protocol 数据');
       const btn = document.getElementById('write-btn');
       btn.disabled = true;
       const start = performance.now();
       let okCount = 0;
       let failCount = 0;
       try {
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          try {
-            const res = await fetch('/api/write', {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain' },
-              mode: 'cors',
-              body: line
-            });
-            if (res.ok) { okCount++; }
-            else { failCount++; }
-          } catch (e) {
-            failCount++;
-          }
-          if (i % 10 === 0) await new Promise(r => requestAnimationFrame(r));
+        // 一次性批量提交所有数据
+        const res = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          mode: 'cors',
+          body: input
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        if (data && data.status === 'ok' && data.written) {
+          okCount = data.written;
+        } else {
+          failCount = lines.length;
         }
         const totalLatency = Math.round(performance.now() - start);
         const avgLatency = lines.length > 0 ? Math.round(totalLatency / lines.length) : 0;
@@ -649,17 +648,17 @@
         const resultEl = document.getElementById('write-result');
         show(resultEl);
         document.getElementById('write-status-icon').innerHTML = statusIcon(ok);
-        document.getElementById('write-status').textContent = `${lines.length} lines: ${okCount} OK, ${failCount} failed`;
+        document.getElementById('write-status').textContent = `${lines.length} 行：${okCount} 条成功，${failCount} 条失败`;
         document.getElementById('write-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
-        document.getElementById('write-output').textContent = `Total: ${lines.length}\nOK: ${okCount}\nFailed: ${failCount}\nTotal Latency: ${totalLatency} ms\nAvg Latency: ${avgLatency} ms`;
-        document.getElementById('write-latency').querySelector('span').textContent = `${totalLatency} ms (avg ${avgLatency} ms)`;
+        document.getElementById('write-output').textContent = `总数: ${lines.length}\n成功: ${okCount}\n失败: ${failCount}\n总延迟: ${totalLatency} ms\n平均延迟: ${avgLatency} ms`;
+        document.getElementById('write-latency').querySelector('span').textContent = `${totalLatency} ms (平均 ${avgLatency} ms)`;
         show(document.getElementById('write-latency'));
         if (okCount > 0) pushPerf('write', avgLatency);
       } catch (e) {
         const resultEl = document.getElementById('write-result');
         show(resultEl);
         document.getElementById('write-status-icon').innerHTML = statusIcon(false);
-        document.getElementById('write-status').textContent = 'Network Error';
+        document.getElementById('write-status').textContent = '网络错误';
         document.getElementById('write-status').className = 'font-medium text-sm text-red-600 dark:text-red-400';
         document.getElementById('write-output').textContent = e.message;
         show(document.getElementById('write-latency'));
@@ -759,9 +758,9 @@
 
     async function doBatchWrite() {
       const input = document.getElementById('batch-input').value.trim();
-      if (!input) return alert('Please generate or enter batch data first');
+      if (!input) return alert('请先生成或输入批量数据');
       const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      if (!lines.length) return alert('No valid lines to write');
+      if (!lines.length) return alert('没有有效的数据行');
       batchLines = lines;
       batchAbort = false;
 
@@ -775,25 +774,24 @@
       const start = performance.now();
       const total = lines.length;
 
-      for (let i = 0; i < total; i++) {
-        if (batchAbort) break;
-        const line = lines[i];
-        try {
-          const res = await fetch('/api/write', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            mode: 'cors',
-            body: line
-          });
-          if (res.ok) { written++; }
-          else { failed++; }
-        } catch (e) {
-          failed++;
+      // 一次性批量提交所有数据
+      try {
+        const res = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          mode: 'cors',
+          body: input
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        if (data && data.status === 'ok' && data.written) {
+          written = data.written;
+        } else {
+          failed = total;
         }
-        const elapsed = (performance.now() - start) / 1000;
-        updateBatchProgress(i + 1, total, written, failed, elapsed);
-        // Small yield to keep UI responsive
-        if (i % 10 === 0) await new Promise(r => requestAnimationFrame(r));
+      } catch (e) {
+        failed = total;
       }
 
       const elapsedTotal = (performance.now() - start) / 1000;
@@ -803,9 +801,9 @@
       show(resultEl);
       const ok = failed === 0;
       document.getElementById('batch-status-icon').innerHTML = statusIcon(ok);
-      document.getElementById('batch-status').textContent = ok ? `Batch complete: ${written} written` : `Batch done: ${written} OK, ${failed} failed`;
+      document.getElementById('batch-status').textContent = ok ? `批量写入完成：${written} 条成功` : `批量写入完成：${written} 条成功，${failed} 条失败`;
       document.getElementById('batch-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
-      document.getElementById('batch-output').textContent = `Total: ${total}\nWritten: ${written}\nFailed: ${failed}\nElapsed: ${elapsedTotal.toFixed(2)}s\nThroughput: ${(elapsedTotal > 0 ? Math.round(total / elapsedTotal) : 0)} pts/sec`;
+      document.getElementById('batch-output').textContent = `总数: ${total}\n成功: ${written}\n失败: ${failed}\n耗时: ${elapsedTotal.toFixed(2)}秒\n吞吐: ${(elapsedTotal > 0 ? Math.round(total / elapsedTotal) : 0)} 条/秒`;
       btn.disabled = false;
     }
 
@@ -849,7 +847,7 @@
     }
     async function doQuery() {
       const series = document.getElementById('query-series').value.trim();
-      if (!series) return alert('Please enter a series ID');
+      if (!series) return alert('请输入序列 ID');
       let start = document.getElementById('query-start').value.trim();
       let end = document.getElementById('query-end').value.trim();
       if (!start) start = '0';
@@ -869,29 +867,35 @@
         const resultEl = document.getElementById('query-result');
         show(resultEl);
         document.getElementById('query-status-icon').innerHTML = statusIcon(ok);
-        document.getElementById('query-status').textContent = ok ? `Success (${res.status})` : `Error (${res.status})`;
+        document.getElementById('query-status').textContent = ok ? `查询成功 (${res.status})` : `查询失败 (${res.status})`;
         document.getElementById('query-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
         document.getElementById('query-latency').querySelector('span').textContent = latency;
         show(document.getElementById('query-latency'));
 
         const rows = Array.isArray(data) ? data : (data.results ?? data.points ?? []);
         lastQueryRows = rows;
-        document.getElementById('query-count').textContent = `${rows.length} rows`;
+        document.getElementById('query-count').textContent = `查询数据条数 ${rows.length}`;
 
         const tbody = document.getElementById('query-tbody');
         tbody.innerHTML = '';
-        rows.slice(0, 200).forEach(row => {
+        if (rows.length === 0) {
           const tr = document.createElement('tr');
-          tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
-          const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? '-';
-          const val = row.value ?? row.val ?? row[1] ?? '-';
-          tr.innerHTML = `<td class="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">${typeof ts === 'number' ? formatTs(ts) : ts}</td><td class="px-4 py-2 font-mono text-xs">${val}</td>`;
+          tr.innerHTML = `<td colspan="2" class="px-4 py-4 text-center text-sm text-gray-400">查询数据条数 0，未找到匹配数据</td>`;
           tbody.appendChild(tr);
-        });
-        if (rows.length > 200) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td colspan="2" class="px-4 py-2 text-center text-xs text-gray-400 italic">... ${rows.length - 200} more rows ...</td>`;
-          tbody.appendChild(tr);
+        } else {
+          rows.slice(0, 200).forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+            const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? '-';
+            const val = row.value ?? row.val ?? row[1] ?? '-';
+            tr.innerHTML = `<td class="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">${typeof ts === 'number' ? formatTs(ts) : ts}</td><td class="px-4 py-2 font-mono text-xs">${val}</td>`;
+            tbody.appendChild(tr);
+          });
+          if (rows.length > 200) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="2" class="px-4 py-2 text-center text-xs text-gray-400 italic">... 还有 ${rows.length - 200} 条数据 ...</td>`;
+            tbody.appendChild(tr);
+          }
         }
 
         // Simple chart
@@ -901,10 +905,10 @@
         const resultEl = document.getElementById('query-result');
         show(resultEl);
         document.getElementById('query-status-icon').innerHTML = statusIcon(false);
-        document.getElementById('query-status').textContent = 'Network Error';
+        document.getElementById('query-status').textContent = '网络错误';
         document.getElementById('query-status').className = 'font-medium text-sm text-red-600 dark:text-red-400';
-        document.getElementById('query-count').textContent = '';
-        document.getElementById('query-tbody').innerHTML = `<tr><td colspan="2" class="px-4 py-2 text-red-500">${e.message}</td></tr>`;
+        document.getElementById('query-count').textContent = '查询数据条数 0';
+        document.getElementById('query-tbody').innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-red-500">请求失败：${e.message}</td></tr>`;
         hide(document.getElementById('chart-container'));
         show(document.getElementById('query-latency'));
       } finally {
