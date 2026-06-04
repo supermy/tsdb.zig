@@ -827,19 +827,25 @@
       doQuery();
     }
     async function loadSampleSeriesId() {
-      const sampleIds = ['cpu,host=server01', 'cpu,host=server01,region=us-west', 'memory,host=server01'];
+      // 写入一条示例数据并获取 series_id，确保查询能查到数据
+      const sampleLine = 'cpu,host=server01,region=us-west usage=42.5';
       try {
-        const res = await fetch('/api/series', { mode: 'cors' });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            const id = typeof data[0] === 'string' ? data[0] : (data[0].series_id ?? data[0].id ?? JSON.stringify(data[0]));
-            document.getElementById('query-series').value = id;
-            return;
-          }
+        const res = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          mode: 'cors',
+          body: sampleLine
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        if (data && data.series_id) {
+          document.getElementById('query-series').value = String(data.series_id);
+          return;
         }
       } catch (e) {}
-      document.getElementById('query-series').value = sampleIds[0];
+      // fallback: use a hardcoded sample ID
+      document.getElementById('query-series').value = '0';
     }
     async function doQuery() {
       const series = document.getElementById('query-series').value.trim();
@@ -1004,7 +1010,7 @@
           const val = row.value ?? row.val ?? row[1] ?? '';
           csv += `${ts},${val}\n`;
         });
-        downloadFile(csv, `query-results-${timestamp}.csv`, 'text/csv');
+        downloadFile(csv, `query-results-${timestamp}.csv`, 'text/plain');
       }
     }
 
