@@ -64,24 +64,34 @@ zig build test
 zig build bench
 ```
 
-示例输出：
+示例输出（ReleaseFast 模式）：
 
 ```
 === TSDB.zig Performance Benchmark ===
 
-Write Throughput:
+Write Throughput (Single Point):
   Points written: 100000
-  Elapsed: 691.20 ms
-  Throughput: 144676 points/sec
+  Elapsed: 11.25 ms
+  Throughput: 8889679 points/sec
+
+Write Throughput (Batch, 1 series):
+  Points written: 100000
+  Elapsed: 12.75 ms
+  Throughput: 7846214 points/sec
+
+Write Throughput (Multi Series, 100 series x 1000 pts):
+  Points written: 100000
+  Elapsed: 14.88 ms
+  Throughput: 6719978 points/sec
 
 Query Latency:
   Queries: 1000
   Range: 10,000 points per query
-  Avg latency: 425.37 us
+  Avg latency: 421.44 us
 
 Memory Partition Sort:
   Points: 1000000
-  Elapsed: 262.42 ms
+  Elapsed: 181.82 ms
   Sorted: true
 ```
 
@@ -174,8 +184,13 @@ const SeriesKey = struct {
 var engine = try tsdb.Engine.init(allocator, "data");
 defer engine.deinit();
 
-// 写入
+// 单点写入
 try engine.write(key, .{ .timestamp = 1699123200000, .value = 42.0 });
+
+// 批量写入（同序列，单次锁保护，性能更优）
+var points = try allocator.alloc(tsdb.DataPoint, 1000);
+// ... fill points ...
+try engine.writeBatch(key, points);
 
 // 查询
 const points = try engine.queryRange(sid, start, end, allocator);

@@ -34,7 +34,7 @@ pub const Compactor = struct {
             const sid = entry.key_ptr.*;
             const data = entry.value_ptr.*;
             const key = src.series_keys.get(sid) orelse continue;
-            const sd = try dst.getOrCreateSeriesData(sid, key);
+            const sd = try dst.getOrCreateSeriesData(sid, key, 1024);
             try sd.timestamps.appendSlice(dst.allocator, data.timestamps.items);
             try sd.values.appendSlice(dst.allocator, data.values.items);
         }
@@ -123,13 +123,13 @@ test "Compactor merge and deduplicate" {
         .metric = "cpu",
         .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "A" }},
     };
-    try part_a.insert(key.computeId(), key, 10, 1.0);
-    try part_a.insert(key.computeId(), key, 20, 2.0);
+    try part_a.insert(key.computeId(), key, 10, 1.0, 1024);
+    try part_a.insert(key.computeId(), key, 20, 2.0, 1024);
 
     var part_b = tsdb.MemoryPartition.init(allocator, 50, 150);
     defer part_b.deinit();
-    try part_b.insert(key.computeId(), key, 20, 3.0); // 重复时间戳
-    try part_b.insert(key.computeId(), key, 30, 4.0);
+    try part_b.insert(key.computeId(), key, 20, 3.0, 1024); // 重复时间戳
+    try part_b.insert(key.computeId(), key, 30, 4.0, 1024);
 
     var merged = try compactor.mergePartitions(&part_a, &part_b);
     defer merged.deinit();

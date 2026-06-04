@@ -105,11 +105,11 @@ test "integration: compaction roundtrip" {
         .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "A" }},
     };
 
-    try part_a.insert(key.computeId(), key, 100, 1.0);
-    try part_a.insert(key.computeId(), key, 200, 2.0);
-    try part_b.insert(key.computeId(), key, 200, 2.5); // 重复
-    try part_b.insert(key.computeId(), key, 300, 3.0);
-    try part_b.insert(key.computeId(), key, 400, 4.0);
+    try part_a.insert(key.computeId(), key, 100, 1.0, 1024);
+    try part_a.insert(key.computeId(), key, 200, 2.0, 1024);
+    try part_b.insert(key.computeId(), key, 200, 2.5, 1024); // 重复
+    try part_b.insert(key.computeId(), key, 300, 3.0, 1024);
+    try part_b.insert(key.computeId(), key, 400, 4.0, 1024);
 
     var compactor = compaction.Compactor.init(allocator);
     var merged = try compactor.mergePartitions(&part_a, &part_b);

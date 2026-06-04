@@ -213,24 +213,31 @@ pub const MemoryPartition = struct {
         allocator.free(key.tags);
     }
 
-    pub fn insert(self: *MemoryPartition, series_id: u64, key: SeriesKey, timestamp: i64, value: f64) !void {
+    pub fn insert(self: *MemoryPartition, series_id: u64, key: SeriesKey, timestamp: i64, value: f64, prealloc: usize) !void {
         const gop = try self.series_map.getOrPut(series_id);
         if (!gop.found_existing) {
             const owned_key = try self.cloneSeriesKey(key);
             errdefer freeSeriesKey(self.allocator, owned_key);
             try self.series_keys.put(series_id, owned_key);
-            gop.value_ptr.* = SeriesData.init();
+            var sd = SeriesData.init();
+            // 预分配容量，减少扩容开销
+            try sd.timestamps.ensureTotalCapacityPrecise(self.allocator, prealloc);
+            try sd.values.ensureTotalCapacityPrecise(self.allocator, prealloc);
+            gop.value_ptr.* = sd;
         }
         try gop.value_ptr.append(self.allocator, timestamp, value);
     }
 
-    pub fn getOrCreateSeriesData(self: *MemoryPartition, series_id: u64, key: SeriesKey) !*SeriesData {
+    pub fn getOrCreateSeriesData(self: *MemoryPartition, series_id: u64, key: SeriesKey, prealloc: usize) !*SeriesData {
         const gop = try self.series_map.getOrPut(series_id);
         if (!gop.found_existing) {
             const owned_key = try self.cloneSeriesKey(key);
             errdefer freeSeriesKey(self.allocator, owned_key);
             try self.series_keys.put(series_id, owned_key);
-            gop.value_ptr.* = SeriesData.init();
+            var sd = SeriesData.init();
+            try sd.timestamps.ensureTotalCapacityPrecise(self.allocator, prealloc);
+            try sd.values.ensureTotalCapacityPrecise(self.allocator, prealloc);
+            gop.value_ptr.* = sd;
         }
         return gop.value_ptr;
     }
@@ -272,6 +279,10 @@ pub const Engine = struct {
     data_dir: []const u8,
     // 最大内存分区大小（点数），超过则刷盘
     max_partition_points: usize,
+    // 热分区当前点数（增量计数，避免每次 O(series_count) 遍历）
+    hot_partition_points: usize,
+    // 预分配容量：每个新序列的初始容量
+    series_prealloc: usize,
 
     pub fn init(allocator: std.mem.Allocator, data_dir: []const u8) !Engine {
         const partition_duration_ms = 3600_000; // 1小时分区
@@ -294,6 +305,8 @@ pub const Engine = struct {
             .lock = .{},
             .data_dir = try allocator.dupe(u8, data_dir),
             .max_partition_points = 10_000_000, // 1000万点
+            .hot_partition_points = 0,
+            .series_prealloc = 1024,
         };
     }
 
@@ -326,28 +339,49 @@ pub const Engine = struct {
     pub fn write(self: *Engine, series_key: SeriesKey, point: DataPoint) !void {
         self.lock.lock();
         defer self.lock.unlock();
+        try self.writeUnlocked(series_key, point);
+    }
+
+    /// 批量写入多个数据点（同序列），单次锁保护
+    pub fn writeBatch(self: *Engine, series_key: SeriesKey, points: []const DataPoint) !void {
+        self.lock.lock();
+        defer self.lock.unlock();
 
         const series_id = series_key.computeId();
+        // 只对第一个点建立索引，后续点复用
+        var first = true;
+        for (points) |point| {
+            try self.writeUnlockedInternal(series_key, point, series_id, &first);
+        }
+    }
 
-        // 更新时间索引
-        for (series_key.tags) |tag| {
-            const index_key = try std.fmt.allocPrint(self.allocator, "{s}={s}", .{ tag.key, tag.value });
-            errdefer self.allocator.free(index_key);
+    fn writeUnlocked(self: *Engine, series_key: SeriesKey, point: DataPoint) !void {
+        const series_id = series_key.computeId();
+        var first = true;
+        try self.writeUnlockedInternal(series_key, point, series_id, &first);
+    }
 
-            const gop = try self.tag_index.getOrPut(index_key);
-            if (!gop.found_existing) {
-                // getOrPut 存储了 index_key 切片头，但我们需要深拷贝所有权
-                // 先 dupe，再替换 key_ptr，最后 free 临时 index_key
-                const owned_key = try self.allocator.dupe(u8, index_key);
-                gop.key_ptr.* = owned_key;
-                gop.value_ptr.* = std.AutoHashMap(u64, void).init(self.allocator);
-                // dupe 成功后释放临时 index_key
-                self.allocator.free(index_key);
-            } else {
-                // key 已存在，释放临时 index_key
-                self.allocator.free(index_key);
+    fn writeUnlockedInternal(self: *Engine, series_key: SeriesKey, point: DataPoint, series_id: u64, is_first: *bool) !void {
+        // 优化：若 series_id 已在热分区中，跳过 tag_index（索引已建立）
+        const is_new_series = !self.hot_partition.series_map.contains(series_id);
+        if (is_new_series and is_first.*) {
+            is_first.* = false;
+            // 更新时间索引（仅新序列需要）
+            for (series_key.tags) |tag| {
+                const index_key = try std.fmt.allocPrint(self.allocator, "{s}={s}", .{ tag.key, tag.value });
+                errdefer self.allocator.free(index_key);
+
+                const gop = try self.tag_index.getOrPut(index_key);
+                if (!gop.found_existing) {
+                    const owned_key = try self.allocator.dupe(u8, index_key);
+                    gop.key_ptr.* = owned_key;
+                    gop.value_ptr.* = std.AutoHashMap(u64, void).init(self.allocator);
+                    self.allocator.free(index_key);
+                } else {
+                    self.allocator.free(index_key);
+                }
+                try gop.value_ptr.put(series_id, {});
             }
-            try gop.value_ptr.put(series_id, {});
         }
 
         // 确定分区
@@ -355,33 +389,23 @@ pub const Engine = struct {
         const partition_end = partition_start + self.partition_duration;
 
         if (partition_start == self.hot_partition.start_time) {
-            try self.hot_partition.insert(series_id, series_key, point.timestamp, point.value);
+            try self.hot_partition.insert(series_id, series_key, point.timestamp, point.value, self.series_prealloc);
         } else if (partition_start < self.hot_partition.start_time) {
-            // 迟到数据：写入只读分区（简化处理：直接忽略或写入专用缓冲区）
-            // 实际生产应写入归属的只读分区并触发合并；此处为简化，写入当前热分区但标记时间异常
-            try self.hot_partition.insert(series_id, series_key, point.timestamp, point.value);
+            try self.hot_partition.insert(series_id, series_key, point.timestamp, point.value, self.series_prealloc);
         } else {
             // 未来数据：旋转分区
             try self.rotateHotPartition();
             self.hot_partition.start_time = partition_start;
             self.hot_partition.end_time = partition_end;
-            try self.hot_partition.insert(series_id, series_key, point.timestamp, point.value);
+            try self.hot_partition.insert(series_id, series_key, point.timestamp, point.value, self.series_prealloc);
         }
 
-        // 检查是否需要刷盘
-        const total_points = self.countHotPartitionPoints();
-        if (total_points >= self.max_partition_points) {
+        self.hot_partition_points += 1;
+
+        // 检查是否需要刷盘（增量计数，O(1)）
+        if (self.hot_partition_points >= self.max_partition_points) {
             try self.flushHotPartition();
         }
-    }
-
-    fn countHotPartitionPoints(self: *Engine) usize {
-        var total: usize = 0;
-        var it = self.hot_partition.series_map.valueIterator();
-        while (it.next()) |sd| {
-            total += sd.len();
-        }
-        return total;
     }
 
     fn rotateHotPartition(self: *Engine) !void {
@@ -461,6 +485,7 @@ pub const Engine = struct {
         // 清空热分区
         self.hot_partition.deinit();
         self.hot_partition.* = MemoryPartition.init(self.allocator, next_start, next_end);
+        self.hot_partition_points = 0;
     }
 
     /// 加载磁盘分区到只读内存（mmap 风格的简化：全量加载）
@@ -525,7 +550,7 @@ pub const Engine = struct {
 
             // getOrCreateSeriesData 会深度克隆 key
             const series_key = SeriesKey{ .metric = metric, .tags = tags };
-            const sd = try partition.getOrCreateSeriesData(sid, series_key);
+            const sd = try partition.getOrCreateSeriesData(sid, series_key, 1024);
             try sd.appendSlice(self.allocator, timestamps, values);
             total_points += point_count;
         }
@@ -691,9 +716,9 @@ test "MemoryPartition insert and sort" {
         .metric = "cpu",
         .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
     };
-    try part.insert(real_key.computeId(), real_key, 100, 1.0);
-    try part.insert(real_key.computeId(), real_key, 50, 2.0);
-    try part.insert(real_key.computeId(), real_key, 200, 3.0);
+    try part.insert(real_key.computeId(), real_key, 100, 1.0, 1024);
+    try part.insert(real_key.computeId(), real_key, 50, 2.0, 1024);
+    try part.insert(real_key.computeId(), real_key, 200, 3.0, 1024);
 
     part.sortAll();
     const sd = part.series_map.get(real_key.computeId()).?;
@@ -861,9 +886,9 @@ test "MemoryPartition insert duplicate series_id" {
     };
     const sid = key.computeId();
 
-    try part.insert(sid, key, 100, 1.0);
-    try part.insert(sid, key, 200, 2.0);
-    try part.insert(sid, key, 300, 3.0);
+    try part.insert(sid, key, 100, 1.0, 1024);
+    try part.insert(sid, key, 200, 2.0, 1024);
+    try part.insert(sid, key, 300, 3.0, 1024);
 
     const sd = part.series_map.get(sid).?;
     try std.testing.expectEqual(@as(usize, 3), sd.len());
@@ -883,8 +908,8 @@ test "MemoryPartition insert multiple series" {
         .tags = &[_]Tag{.{ .key = "host", .value = "B" }},
     };
 
-    try part.insert(key_a.computeId(), key_a, 100, 1.0);
-    try part.insert(key_b.computeId(), key_b, 200, 2.0);
+    try part.insert(key_a.computeId(), key_a, 100, 1.0, 1024);
+    try part.insert(key_b.computeId(), key_b, 200, 2.0, 1024);
 
     try std.testing.expectEqual(@as(usize, 2), part.series_map.count());
 }
@@ -1188,7 +1213,7 @@ test "freeSeriesKey releases all memory" {
             .{ .key = "dc", .value = "us-east" },
         },
     };
-    try part.insert(key.computeId(), key, 100, 1.0);
+    try part.insert(key.computeId(), key, 100, 1.0, 1024);
     // deinit 应正确释放所有内存（testing.allocator 会检测泄漏）
 }
 
@@ -1204,7 +1229,7 @@ test "insert and getOrCreateSeriesData maintain series_map/series_keys consisten
     const sid = key.computeId();
 
     // insert 后 series_map 和 series_keys 应一致
-    try part.insert(sid, key, 100, 1.0);
+    try part.insert(sid, key, 100, 1.0, 1024);
     try std.testing.expect(part.series_map.contains(sid));
     try std.testing.expect(part.series_keys.contains(sid));
 
@@ -1214,7 +1239,7 @@ test "insert and getOrCreateSeriesData maintain series_map/series_keys consisten
         .tags = &[_]Tag{.{ .key = "host", .value = "B" }},
     };
     const sid2 = key2.computeId();
-    const sd = try part.getOrCreateSeriesData(sid2, key2);
+    const sd = try part.getOrCreateSeriesData(sid2, key2, 1024);
     try std.testing.expect(part.series_map.contains(sid2));
     try std.testing.expect(part.series_keys.contains(sid2));
     try std.testing.expectEqual(@as(usize, 0), sd.len());

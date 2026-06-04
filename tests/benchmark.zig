@@ -28,20 +28,22 @@ pub fn main() !void {
 
     std.debug.print("\n=== TSDB.zig Performance Benchmark ===\n\n", .{});
 
-    try benchmarkWriteThroughput(allocator);
+    try benchmarkWriteSinglePoint(allocator);
+    try benchmarkWriteBatch(allocator);
+    try benchmarkWriteMultiSeries(allocator);
     try benchmarkQueryLatency(allocator);
     try benchmarkMemoryPartitionSort(allocator);
 }
 
-fn benchmarkWriteThroughput(allocator: std.mem.Allocator) !void {
-    const data_dir = "tmp_bench_write";
+/// 单点逐条写入（模拟高基数场景，与 InfluxDB 3 Core ~320K/s 对标）
+fn benchmarkWriteSinglePoint(allocator: std.mem.Allocator) !void {
+    const data_dir = "tmp_bench_single";
     defer tsdb.fs_helper.deleteTree(data_dir) catch {};
 
     var engine = try tsdb.Engine.init(allocator, data_dir);
     defer engine.deinit();
 
-    const points_per_series = 100_000;
-
+    const total_points = 100_000;
     const key = tsdb.SeriesKey{
         .metric = "cpu",
         .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "benchmark" }},
@@ -49,7 +51,7 @@ fn benchmarkWriteThroughput(allocator: std.mem.Allocator) !void {
 
     var timer = try Timer.start();
     var i: u32 = 0;
-    while (i < points_per_series) : (i += 1) {
+    while (i < total_points) : (i += 1) {
         try engine.write(key, .{
             .timestamp = @as(i64, i),
             .value = @floatFromInt(i),
@@ -57,10 +59,89 @@ fn benchmarkWriteThroughput(allocator: std.mem.Allocator) !void {
     }
     const elapsed_ns = timer.read();
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
+    const points_per_sec = @as(f64, @floatFromInt(total_points)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    std.debug.print("Write Throughput (Single Point):\n", .{});
+    std.debug.print("  Points written: {d}\n", .{total_points});
+    std.debug.print("  Elapsed: {d:.2} ms\n", .{elapsed_ms});
+    std.debug.print("  Throughput: {d:.0} points/sec\n\n", .{points_per_sec});
+}
+
+/// 批量写入（同序列，单次锁保护）
+fn benchmarkWriteBatch(allocator: std.mem.Allocator) !void {
+    const data_dir = "tmp_bench_batch";
+    defer tsdb.fs_helper.deleteTree(data_dir) catch {};
+
+    var engine = try tsdb.Engine.init(allocator, data_dir);
+    defer engine.deinit();
+
+    const points_per_series = 100_000;
+    const key = tsdb.SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "benchmark" }},
+    };
+
+    var points = try allocator.alloc(tsdb.DataPoint, points_per_series);
+    defer allocator.free(points);
+    var i: u32 = 0;
+    while (i < points_per_series) : (i += 1) {
+        points[i] = .{
+            .timestamp = @as(i64, i),
+            .value = @floatFromInt(i),
+        };
+    }
+
+    var timer = try Timer.start();
+    try engine.writeBatch(key, points);
+    const elapsed_ns = timer.read();
+    const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const points_per_sec = @as(f64, @floatFromInt(points_per_series)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
-    std.debug.print("Write Throughput:\n", .{});
+    std.debug.print("Write Throughput (Batch, 1 series):\n", .{});
     std.debug.print("  Points written: {d}\n", .{points_per_series});
+    std.debug.print("  Elapsed: {d:.2} ms\n", .{elapsed_ms});
+    std.debug.print("  Throughput: {d:.0} points/sec\n\n", .{points_per_sec});
+}
+
+/// 多序列批量写入（模拟真实监控：100 个 host，每个 1000 点）
+fn benchmarkWriteMultiSeries(allocator: std.mem.Allocator) !void {
+    const data_dir = "tmp_bench_multi";
+    defer tsdb.fs_helper.deleteTree(data_dir) catch {};
+
+    var engine = try tsdb.Engine.init(allocator, data_dir);
+    defer engine.deinit();
+
+    const num_series = 100;
+    const points_per_series = 1_000;
+    const total_points = num_series * points_per_series;
+
+    var buf: [32]u8 = undefined;
+
+    var timer = try Timer.start();
+    var s: u32 = 0;
+    while (s < num_series) : (s += 1) {
+        const host = try std.fmt.bufPrint(&buf, "host{d}", .{s});
+        const key = tsdb.SeriesKey{
+            .metric = "cpu",
+            .tags = &[_]tsdb.Tag{.{ .key = "host", .value = host }},
+        };
+        var points = try allocator.alloc(tsdb.DataPoint, points_per_series);
+        defer allocator.free(points);
+        var i: u32 = 0;
+        while (i < points_per_series) : (i += 1) {
+            points[i] = .{
+                .timestamp = @as(i64, i),
+                .value = @floatFromInt(i % 100),
+            };
+        }
+        try engine.writeBatch(key, points);
+    }
+    const elapsed_ns = timer.read();
+    const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
+    const points_per_sec = @as(f64, @floatFromInt(total_points)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+
+    std.debug.print("Write Throughput (Multi Series, {d} series x {d} pts):\n", .{ num_series, points_per_series });
+    std.debug.print("  Points written: {d}\n", .{total_points});
     std.debug.print("  Elapsed: {d:.2} ms\n", .{elapsed_ms});
     std.debug.print("  Throughput: {d:.0} points/sec\n\n", .{points_per_sec});
 }
@@ -78,15 +159,18 @@ fn benchmarkQueryLatency(allocator: std.mem.Allocator) !void {
     };
     const sid = key.computeId();
 
-    // 预加载 100 万点
+    // 预加载 100 万点（使用批量写入）
     const total_points = 1_000_000;
+    var batch = try allocator.alloc(tsdb.DataPoint, total_points);
+    defer allocator.free(batch);
     var i: u32 = 0;
     while (i < total_points) : (i += 1) {
-        try engine.write(key, .{
+        batch[i] = .{
             .timestamp = @as(i64, i),
             .value = @floatFromInt(i % 100),
-        });
+        };
     }
+    try engine.writeBatch(key, batch);
 
     // 刷盘后再加载以测试磁盘查询
     try engine.flushHotPartition();
@@ -139,7 +223,7 @@ fn benchmarkMemoryPartitionSort(allocator: std.mem.Allocator) !void {
     var i: u32 = 0;
     while (i < n) : (i += 1) {
         const ts = rng.int(i64);
-        try part.insert(key.computeId(), key, ts, @floatFromInt(ts));
+        try part.insert(key.computeId(), key, ts, @floatFromInt(ts), 1024);
     }
 
     var timer = try Timer.start();

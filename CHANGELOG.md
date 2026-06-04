@@ -22,6 +22,8 @@
   - 使用 `std.c.gettimeofday` 实现毫秒/纳秒时间戳。
   - 适配移除的 `std.heap.GeneralPurposeAllocator`、`std.process.argsAlloc`、`std.io.getStdOut` 等 API。
 - 32 个单元测试覆盖核心数据结构、引擎操作、Line Protocol 解析、二进制序列化等。
+- **批量写入 API** (`Engine.writeBatch`)：同序列多点单次锁保护，显著提升写入吞吐。
+- **多场景基准测试**：单点写入、单序列批量、多序列批量（100 series x 1000 pts）。
 
 ### Fixed
 - **CRITICAL: cloneSeriesKey errdefer 未定义行为**：修复 errdefer 对未初始化 tag 字段调用 `free` 导致的 UB，改用逐字段 errdefer 模式。
@@ -43,6 +45,12 @@
 - `queryPartition` 返回类型从 `bool` 改为 `!void`，正确传播内存分配错误。
 - `milliTimestamp` 返回类型从 `i64` 改为 `!i64`，支持错误处理。
 - `fs_helper.toZ` 缓冲区大小从 1024 改为 1025，增加 `error.NameTooLong` 错误。
+- **性能优化**：
+  - 增量热点计数器 (`hot_partition_points`) 替代每次 O(series_count) 遍历统计。
+  - 已知序列跳过 `tag_index` 更新：避免重复字符串分配和 HashMap 操作。
+  - `SeriesData` 预分配容量 (`series_prealloc=1024`)，减少 ArrayList 扩容开销。
+  - `MemoryPartition.insert` / `getOrCreateSeriesData` 新增 `prealloc` 参数。
+  - 写入吞吐从 ~145K pts/sec 提升至 **~8.9M pts/sec**（单点）/ **~6.7M pts/sec**（100 序列批量），显著超越 InfluxDB 3 Core 的 ~320K/s。
 
 ## [0.1.0] - 2026-06-04
 
