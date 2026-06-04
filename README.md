@@ -154,10 +154,19 @@ echo '{"cmd":"stats"}' | nng req tcp://127.0.0.1:8080
 
 启动服务后，浏览器访问 `http://localhost:8081`（假设 NNG 端口为 8080）：
 
-- `GET /` 或 `GET /index.html` → 内嵌测试页面
+- `GET /` 或 `GET /index.html` → 内嵌测试页面（单页应用）
 - `POST /api/write` → 写入数据（body 为 line protocol）
 - `GET /api/query?series_id=...&start=...&end=...` → 查询数据
 - `GET /api/stats` → 服务器统计
+
+Web UI 功能：
+- **单条写入测试**：支持手动输入 Line Protocol，或点击预设示例（CPU / 内存 / 温度）
+- **快速单点写入**：通过 Metric、Tags、Value、Timestamp 表单快速构建并发送
+- **批量写入测试**：生成模拟数据（指定序列数、每序列点数、时间范围），逐行批量写入，实时显示进度与吞吐
+- **数据导入**：支持拖拽上传 `.txt` / `.csv` 文件，解析并批量写入
+- **数据导出**：查询结果可导出为 JSON 或 CSV；统计面板可导出为 JSON
+- **查询可视化**：Canvas 折线图 + 数据表格，支持暗色/亮色模式
+- **性能监控**：实时写入/查询延迟柱状图与 Min/Avg/Max 统计
 
 ## GPU 加速
 
@@ -282,6 +291,17 @@ defer allocator.free(points);
 - 使用 `std.heap.page_allocator` 替代已移除的 `std.heap.GeneralPurposeAllocator`
 - 自定义 `fs_helper.zig` 封装 POSIX 文件操作，绕过 `std.fs` 的 API 变更
 - 使用 POSIX socket 实现 HTTP 服务器（`std.net` 已移除）
+
+## CI/CD
+
+本项目使用 GitHub Actions 实现自动化流水线，配置位于 `.github/workflows/ci.yml`：
+
+| 阶段 | 说明 |
+|------|------|
+| **Lint** | `zig fmt --check` 代码格式检查 |
+| **Test** | Ubuntu / macOS 双平台运行 `zig build test` 与基准测试 |
+| **Build** | 交叉编译：`x86_64-linux-gnu`、`aarch64-macos-none`、`x86_64-macos-none` |
+| **Release** | 推送 `v*` 标签时自动创建 GitHub Release 并上传多平台二进制 |
 
 ## 路线图
 

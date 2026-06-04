@@ -47,6 +47,8 @@
     .fade-in { animation: fade-in 0.3s ease-out; }
     /* Table */
     .data-table th { position: sticky; top: 0; }
+    /* Drag drop zone */
+    .drag-active { border-color: #3b82f6 !important; background: rgba(59,130,246,0.1) !important; }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100 min-h-screen transition-colors duration-200">
@@ -90,10 +92,16 @@
           <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
           Server Stats
         </h2>
-        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-          <input id="auto-refresh" type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-          Auto-refresh
-        </label>
+        <div class="flex items-center gap-3">
+          <button onclick="exportStats()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export JSON
+          </button>
+          <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input id="auto-refresh" type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+            Auto-refresh
+          </label>
+        </div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
@@ -119,7 +127,12 @@
       </h2>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-gray-800/50 flex flex-wrap gap-2">
-          <button onclick="insertSampleWrite()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">Insert Sample</button>
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 self-center mr-1">Presets:</span>
+          <button onclick="insertPreset('cpu')" class="text-xs px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium">CPU Sample</button>
+          <button onclick="insertPreset('memory')" class="text-xs px-3 py-1.5 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors font-medium">Memory Sample</button>
+          <button onclick="insertPreset('temperature')" class="text-xs px-3 py-1.5 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors font-medium">Temperature Sample</button>
+          <button onclick="insertPreset('multi')" class="text-xs px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors font-medium">Multi-series Batch</button>
+          <div class="flex-1"></div>
           <button onclick="clearWrite()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">Clear</button>
         </div>
         <div class="p-4">
@@ -134,6 +147,40 @@
             </div>
           </div>
         </div>
+
+        <!-- Single Point Quick Write -->
+        <div class="border-t border-gray-100 dark:border-dark-border p-4 bg-gray-50/30 dark:bg-gray-800/30">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Quick Write
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Metric</label>
+              <input id="qw-metric" type="text" value="cpu" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="cpu">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tags (k=v,...)</label>
+              <input id="qw-tags" type="text" value="host=server01,region=us-west" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="host=server01">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Field (k=v)</label>
+              <input id="qw-field" type="text" value="usage=75.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="usage=75.5">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Timestamp (ns, optional)</label>
+              <input id="qw-ts" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="auto">
+            </div>
+            <div class="flex items-end">
+              <button onclick="doQuickWrite()" id="quick-write-btn" class="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Quick Write
+              </button>
+            </div>
+          </div>
+          <div id="quick-write-result" class="hidden mt-2 text-xs"></div>
+        </div>
+
         <div id="write-result" class="hidden border-t border-gray-100 dark:border-dark-border">
           <div class="p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -141,6 +188,70 @@
               <span id="write-status" class="font-medium text-sm"></span>
             </div>
             <pre id="write-output" class="font-mono text-xs bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-auto max-h-60 border border-gray-200 dark:border-gray-700"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Batch Write Test -->
+    <section class="fade-in">
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        Batch Write Test
+      </h2>
+      <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metric Name</label>
+            <input id="batch-metric" type="text" value="cpu" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series Count</label>
+            <input id="batch-series" type="number" value="5" min="1" max="1000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Points / Series</label>
+            <input id="batch-points" type="number" value="10" min="1" max="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Range (hours)</label>
+            <input id="batch-hours" type="number" value="1" min="0.1" max="168" step="0.1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+          </div>
+        </div>
+        <div class="px-4 pb-4 flex flex-wrap items-center gap-3">
+          <button onclick="generateBatchData()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            Generate
+          </button>
+          <button onclick="doBatchWrite()" id="batch-write-btn" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            Write Batch
+          </button>
+          <button onclick="clearBatch()" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Clear</button>
+        </div>
+        <div class="px-4 pb-4">
+          <textarea id="batch-input" rows="8" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all resize-y" placeholder="Generated batch data will appear here..."></textarea>
+        </div>
+        <!-- Progress -->
+        <div id="batch-progress-area" class="hidden px-4 pb-4">
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-2">
+            <div id="batch-progress-bar" class="bg-primary-600 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <div class="flex flex-wrap justify-between text-xs text-gray-600 dark:text-gray-400 gap-2">
+            <span>Progress: <span id="batch-progress-text" class="font-mono font-medium">0/0</span></span>
+            <span>Written: <span id="batch-written" class="font-mono font-medium text-emerald-600 dark:text-emerald-400">0</span></span>
+            <span>Failed: <span id="batch-failed" class="font-mono font-medium text-red-600 dark:text-red-400">0</span></span>
+            <span>Elapsed: <span id="batch-elapsed" class="font-mono font-medium">0s</span></span>
+            <span>Throughput: <span id="batch-throughput" class="font-mono font-medium text-primary-600 dark:text-primary-400">0</span> pts/sec</span>
+          </div>
+        </div>
+        <div id="batch-result" class="hidden border-t border-gray-100 dark:border-dark-border">
+          <div class="p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span id="batch-status-icon"></span>
+              <span id="batch-status" class="font-medium text-sm"></span>
+            </div>
+            <pre id="batch-output" class="font-mono text-xs bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-auto max-h-40 border border-gray-200 dark:border-gray-700"></pre>
           </div>
         </div>
       </div>
@@ -184,7 +295,17 @@
                 <span id="query-status-icon"></span>
                 <span id="query-status" class="font-medium text-sm"></span>
               </div>
-              <span id="query-count" class="text-xs text-gray-500 dark:text-gray-400"></span>
+              <div class="flex items-center gap-2">
+                <span id="query-count" class="text-xs text-gray-500 dark:text-gray-400 mr-2"></span>
+                <button onclick="exportQueryResults('json')" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  JSON
+                </button>
+                <button onclick="exportQueryResults('csv')" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  CSV
+                </button>
+              </div>
             </div>
             <!-- Chart -->
             <div id="chart-container" class="mb-4 hidden">
@@ -201,6 +322,69 @@
                 </thead>
                 <tbody id="query-tbody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Import / Export -->
+    <section class="fade-in">
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+        Import / Export
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Import -->
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5">
+          <h3 class="font-medium text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Import Line Protocol
+          </h3>
+          <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center transition-colors cursor-pointer hover:border-primary-400 dark:hover:border-primary-500">
+            <svg class="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Drag & drop a <strong>.txt</strong> or <strong>.csv</strong> file here</p>
+            <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">or click to browse</p>
+            <input id="import-file" type="file" accept=".txt,.csv" class="hidden">
+          </div>
+          <div id="import-progress-area" class="hidden mt-3">
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+              <div id="import-progress-bar" class="bg-emerald-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+              <span id="import-progress-text">0/0 lines</span>
+              <span id="import-status" class="font-medium"></span>
+            </div>
+          </div>
+          <div id="import-result" class="hidden mt-3 text-xs"></div>
+        </div>
+
+        <!-- Export -->
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5">
+          <h3 class="font-medium text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export Data
+          </h3>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+              <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Query Results</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Export the last query results</p>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="exportQueryResults('json')" class="text-xs px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium">JSON</button>
+                <button onclick="exportQueryResults('csv')" class="text-xs px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors font-medium">CSV</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+              <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Server Statistics</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Export current stats as JSON</p>
+              </div>
+              <button onclick="exportStats()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Export
+              </button>
             </div>
           </div>
         </div>
@@ -272,14 +456,27 @@
         ? '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
         : '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
     }
+    function downloadFile(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
 
     // ===================== Stats =====================
     let statsTimer = null;
+    let lastStatsData = null;
     async function fetchStats() {
       try {
-        const res = await fetch('/api/stats');
+        const res = await fetch('/api/stats', { mode: 'cors' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        lastStatsData = data;
         setText(document.getElementById('stat-hot'), data.hot_partitions ?? data.hot ?? '-');
         setText(document.getElementById('stat-readonly'), data.readonly_partitions ?? data.readonly ?? '-');
         setText(document.getElementById('stat-disk'), data.disk_partitions ?? data.disk ?? '-');
@@ -314,6 +511,18 @@
     });
     startStatsRefresh();
 
+    function exportStats() {
+      if (!lastStatsData) {
+        alert('No stats available yet. Please wait for auto-refresh or check server connection.');
+        return;
+      }
+      const payload = {
+        exported_at: new Date().toISOString(),
+        stats: lastStatsData
+      };
+      downloadFile(JSON.stringify(payload, null, 2), 'tsdb-stats.json', 'application/json');
+    }
+
     // ===================== Write =====================
     function insertSampleWrite() {
       const ts = Date.now() * 1e6;
@@ -324,6 +533,31 @@
       hide(document.getElementById('write-result'));
       hide(document.getElementById('write-latency'));
     }
+
+    function insertPreset(type) {
+      const ts = Date.now() * 1e6;
+      const ta = document.getElementById('write-input');
+      let lines = '';
+      if (type === 'cpu') {
+        lines = `cpu,host=server01,region=us-west usage_user=${(10+Math.random()*60).toFixed(2)},usage_system=${(5+Math.random()*20).toFixed(2)},usage_idle=${(20+Math.random()*40).toFixed(2)} ${ts}`;
+      } else if (type === 'memory') {
+        lines = `memory,host=server01,region=us-west used_percent=${(30+Math.random()*50).toFixed(2)},available=${Math.floor(1+Math.random()*15)}i,buffered=${Math.floor(Math.random()*4)}i ${ts}`;
+      } else if (type === 'temperature') {
+        lines = `temperature,host=server01,sensor=cpu0 celsius=${(35+Math.random()*45).toFixed(2)} ${ts}\ntemperature,host=server01,sensor=cpu1 celsius=${(35+Math.random()*45).toFixed(2)} ${ts}`;
+      } else if (type === 'multi') {
+        const hosts = ['server01', 'server02', 'server03'];
+        const regions = ['us-west', 'us-east', 'eu-central'];
+        for (let i = 0; i < 5; i++) {
+          const host = hosts[i % hosts.length];
+          const region = regions[i % regions.length];
+          const t = ts - i * 1e9;
+          lines += `cpu,host=${host},region=${region} usage=${(Math.random()*100).toFixed(2)},temp=${(30+Math.random()*40).toFixed(2)} ${t}\n`;
+        }
+      }
+      ta.value = lines;
+      ta.focus();
+    }
+
     async function doWrite() {
       const input = document.getElementById('write-input').value.trim();
       if (!input) return alert('Please enter InfluxDB line protocol data');
@@ -334,6 +568,7 @@
         const res = await fetch('/api/write', {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
+          mode: 'cors',
           body: input
         });
         const latency = Math.round(performance.now() - start);
@@ -363,7 +598,149 @@
       }
     }
 
+    // ===================== Quick Write =====================
+    async function doQuickWrite() {
+      const metric = document.getElementById('qw-metric').value.trim();
+      const tags = document.getElementById('qw-tags').value.trim();
+      const field = document.getElementById('qw-field').value.trim();
+      const tsInput = document.getElementById('qw-ts').value.trim();
+      if (!metric || !field) return alert('Metric and Field are required');
+      let line = metric;
+      if (tags) line += ',' + tags;
+      line += ' ' + field;
+      if (tsInput) line += ' ' + tsInput;
+      else line += ' ' + (Date.now() * 1e6);
+
+      const btn = document.getElementById('quick-write-btn');
+      const result = document.getElementById('quick-write-result');
+      btn.disabled = true;
+      const start = performance.now();
+      try {
+        const res = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          mode: 'cors',
+          body: line
+        });
+        const latency = Math.round(performance.now() - start);
+        const ok = res.ok;
+        show(result);
+        result.className = 'mt-2 text-xs ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        result.textContent = ok ? `Quick write OK (${res.status}) in ${latency} ms` : `Quick write failed (${res.status})`;
+        if (ok) pushPerf('write', latency);
+      } catch (e) {
+        show(result);
+        result.className = 'mt-2 text-xs text-red-600 dark:text-red-400';
+        result.textContent = 'Network Error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ===================== Batch Write =====================
+    let batchLines = [];
+    let batchAbort = false;
+
+    function generateBatchData() {
+      const metric = document.getElementById('batch-metric').value.trim() || 'cpu';
+      const seriesCount = parseInt(document.getElementById('batch-series').value) || 5;
+      const pointsPerSeries = parseInt(document.getElementById('batch-points').value) || 10;
+      const hours = parseFloat(document.getElementById('batch-hours').value) || 1;
+      const now = Date.now() * 1e6;
+      const rangeNs = hours * 3600e9;
+      const startNs = now - rangeNs;
+      const hosts = ['server01', 'server02', 'server03', 'server04', 'server05'];
+      const regions = ['us-west', 'us-east', 'eu-central', 'ap-south'];
+      let lines = [];
+      for (let s = 0; s < seriesCount; s++) {
+        const host = hosts[s % hosts.length];
+        const region = regions[s % regions.length];
+        for (let p = 0; p < pointsPerSeries; p++) {
+          const t = startNs + Math.floor((rangeNs * p) / (pointsPerSeries - 1 || 1));
+          const val = (Math.random() * 100).toFixed(2);
+          const temp = (30 + Math.random() * 40).toFixed(2);
+          lines.push(`${metric},host=${host},region=${region} usage=${val},temperature=${temp} ${t}`);
+        }
+      }
+      document.getElementById('batch-input').value = lines.join('\n');
+      batchLines = lines;
+      hide(document.getElementById('batch-progress-area'));
+      hide(document.getElementById('batch-result'));
+    }
+
+    function clearBatch() {
+      document.getElementById('batch-input').value = '';
+      batchLines = [];
+      hide(document.getElementById('batch-progress-area'));
+      hide(document.getElementById('batch-result'));
+      updateBatchProgress(0, 0, 0, 0, 0);
+    }
+
+    function updateBatchProgress(done, total, written, failed, elapsedSec) {
+      const pct = total > 0 ? (done / total) * 100 : 0;
+      document.getElementById('batch-progress-bar').style.width = pct + '%';
+      document.getElementById('batch-progress-text').textContent = `${done}/${total}`;
+      document.getElementById('batch-written').textContent = written;
+      document.getElementById('batch-failed').textContent = failed;
+      document.getElementById('batch-elapsed').textContent = elapsedSec.toFixed(1) + 's';
+      const throughput = elapsedSec > 0 ? Math.round(done / elapsedSec) : 0;
+      document.getElementById('batch-throughput').textContent = throughput;
+    }
+
+    async function doBatchWrite() {
+      const input = document.getElementById('batch-input').value.trim();
+      if (!input) return alert('Please generate or enter batch data first');
+      const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (!lines.length) return alert('No valid lines to write');
+      batchLines = lines;
+      batchAbort = false;
+
+      const btn = document.getElementById('batch-write-btn');
+      btn.disabled = true;
+      show(document.getElementById('batch-progress-area'));
+      hide(document.getElementById('batch-result'));
+
+      let written = 0;
+      let failed = 0;
+      const start = performance.now();
+      const total = lines.length;
+
+      for (let i = 0; i < total; i++) {
+        if (batchAbort) break;
+        const line = lines[i];
+        try {
+          const res = await fetch('/api/write', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            mode: 'cors',
+            body: line
+          });
+          if (res.ok) { written++; }
+          else { failed++; }
+        } catch (e) {
+          failed++;
+        }
+        const elapsed = (performance.now() - start) / 1000;
+        updateBatchProgress(i + 1, total, written, failed, elapsed);
+        // Small yield to keep UI responsive
+        if (i % 10 === 0) await new Promise(r => requestAnimationFrame(r));
+      }
+
+      const elapsedTotal = (performance.now() - start) / 1000;
+      updateBatchProgress(total, total, written, failed, elapsedTotal);
+
+      const resultEl = document.getElementById('batch-result');
+      show(resultEl);
+      const ok = failed === 0;
+      document.getElementById('batch-status-icon').innerHTML = statusIcon(ok);
+      document.getElementById('batch-status').textContent = ok ? `Batch complete: ${written} written` : `Batch done: ${written} OK, ${failed} failed`;
+      document.getElementById('batch-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
+      document.getElementById('batch-output').textContent = `Total: ${total}\nWritten: ${written}\nFailed: ${failed}\nElapsed: ${elapsedTotal.toFixed(2)}s\nThroughput: ${(elapsedTotal > 0 ? Math.round(total / elapsedTotal) : 0)} pts/sec`;
+      btn.disabled = false;
+    }
+
     // ===================== Query =====================
+    let lastQueryRows = [];
     function fillNowRange() {
       const now = Date.now() * 1e6;
       const hourAgo = now - 3600e9;
@@ -383,7 +760,7 @@
         url.searchParams.set('series_id', series);
         url.searchParams.set('start', start);
         url.searchParams.set('end', end);
-        const res = await fetch(url);
+        const res = await fetch(url, { mode: 'cors' });
         const latency = Math.round(performance.now() - startPerf);
         const data = await res.json();
         const ok = res.ok;
@@ -396,6 +773,7 @@
         show(document.getElementById('query-latency'));
 
         const rows = Array.isArray(data) ? data : (data.results ?? data.points ?? []);
+        lastQueryRows = rows;
         document.getElementById('query-count').textContent = `${rows.length} rows`;
 
         const tbody = document.getElementById('query-tbody');
@@ -513,6 +891,90 @@
       ctx.lineTo(pad.left, pad.top + gh);
       ctx.closePath();
       ctx.fill();
+    }
+
+    function exportQueryResults(format) {
+      if (!lastQueryRows || !lastQueryRows.length) {
+        alert('No query results to export. Run a query first.');
+        return;
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      if (format === 'json') {
+        downloadFile(JSON.stringify(lastQueryRows, null, 2), `query-results-${timestamp}.json`, 'application/json');
+      } else if (format === 'csv') {
+        let csv = 'timestamp,value\n';
+        lastQueryRows.forEach(row => {
+          const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? '';
+          const val = row.value ?? row.val ?? row[1] ?? '';
+          csv += `${ts},${val}\n`;
+        });
+        downloadFile(csv, `query-results-${timestamp}.csv`, 'text/csv');
+      }
+    }
+
+    // ===================== Import =====================
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('import-file');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-active'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-active');
+      const files = e.dataTransfer.files;
+      if (files.length) importFile(files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) importFile(e.target.files[0]);
+    });
+
+    async function importFile(file) {
+      if (!file) return;
+      const text = await file.text();
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (!lines.length) {
+        alert('File is empty or has no valid lines');
+        return;
+      }
+      const progressArea = document.getElementById('import-progress-area');
+      const progressBar = document.getElementById('import-progress-bar');
+      const progressText = document.getElementById('import-progress-text');
+      const statusEl = document.getElementById('import-status');
+      const resultEl = document.getElementById('import-result');
+      show(progressArea);
+      hide(resultEl);
+
+      let written = 0;
+      let failed = 0;
+      const total = lines.length;
+      const start = performance.now();
+
+      for (let i = 0; i < total; i++) {
+        const line = lines[i];
+        try {
+          const res = await fetch('/api/write', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            mode: 'cors',
+            body: line
+          });
+          if (res.ok) written++; else failed++;
+        } catch (e) {
+          failed++;
+        }
+        const pct = ((i + 1) / total) * 100;
+        progressBar.style.width = pct + '%';
+        progressText.textContent = `${i + 1}/${total} lines`;
+        statusEl.textContent = `${written} OK, ${failed} failed`;
+        if (i % 10 === 0) await new Promise(r => requestAnimationFrame(r));
+      }
+
+      const elapsed = (performance.now() - start) / 1000;
+      show(resultEl);
+      const ok = failed === 0;
+      resultEl.className = 'mt-3 text-xs ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
+      resultEl.textContent = `Import complete: ${written} written, ${failed} failed, ${elapsed.toFixed(2)}s (${Math.round(total/elapsed)} lines/sec)`;
     }
 
     // ===================== Perf Charts =====================

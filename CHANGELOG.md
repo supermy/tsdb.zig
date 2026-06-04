@@ -27,6 +27,12 @@
 - 47+ 个单元测试覆盖核心数据结构、引擎操作、Line Protocol 解析、二进制序列化、GPU 加速、HTTP 参数解析等。
 - **批量写入 API** (`Engine.writeBatch`)：同序列多点单次锁保护，显著提升写入吞吐。
 - **多场景基准测试**：单点写入、单序列批量、多序列批量（100 series x 1000 pts）。
+- **增强版 Web 测试页面**：
+  - 单条/批量写入测试、示例数据预设（CPU / 内存 / 温度）
+  - 快速单点写入表单（Metric + Tags + Value + Timestamp）
+  - 批量数据生成器（可配置序列数、点数、时间范围）与进度监控
+  - 数据导入（拖拽上传 txt/csv）与导出（JSON / CSV）
+- **GitHub Actions CI/CD**：多平台自动构建（Linux x86_64 / macOS aarch64 / macOS x86_64）、测试、格式检查、Release 发布。
 
 ### Fixed
 - **CRITICAL: cloneSeriesKey errdefer 未定义行为**：修复 errdefer 对未初始化 tag 字段调用 `free` 导致的 UB，改用逐字段 errdefer 模式。

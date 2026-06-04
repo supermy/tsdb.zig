@@ -33,7 +33,7 @@
 
 - `tsdb.zig`：摄入路由器、Arrow C Data Interface 封装、Parquet 写入调度、DataFusion FFI 会话上下文、分区目录、保留策略运行器。
 - `tsdb_cli.zig`：命令行、SQL/InfluxQL 的 REPL、批量加载、分区检查。
-- `tsdb_server.zig`：Arrow Flight SQL 端点（通过 Flight C++ FFI 桥接）、HTTP API（兼容 OpenTelemetry/InfluxDB Line Protocol）、工作队列、流式查询分发、热分区磁盘缓存策略。
+- `tsdb_server.zig`：Arrow Flight SQL 端点（通过 Flight C++ FFI 桥接）、HTTP API（兼容 OpenTelemetry/InfluxDB Line Protocol）、工作队列、流式查询分发、热分区磁盘缓存策略。nng 实现高性能的接口服务。
 - `ffi/arrow.zig`：Arrow C Data Interface (`ArrowArray` / `ArrowSchema`) 的 Zig 封装、RecordBatch 构建器、内存对齐与释放适配器。
 - `ffi/parquet.zig`：Parquet C++ API 的 Zig FFI 封装、列编码配置（时间戳 delta、标签 dictionary）、布隆过滤器构造器。
 - `ffi/datafusion.zig`：DataFusion 的 C FFI 封装、SQL 解析、物理计划执行、自定义 UDF/UDAF 注册（时序专用：gap fill、rate、derivative、dedup）。
