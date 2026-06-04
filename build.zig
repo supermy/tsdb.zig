@@ -16,12 +16,19 @@ pub fn build(b: *std.Build) void {
     });
     compaction_mod.addImport("tsdb", tsdb_mod);
 
+    const nng_mod = b.createModule(.{
+        .root_source_file = b.path("src/nng.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const server_mod = b.createModule(.{
         .root_source_file = b.path("src/server.zig"),
         .target = target,
         .optimize = optimize,
     });
     server_mod.addImport("tsdb", tsdb_mod);
+    server_mod.addImport("nng", nng_mod);
 
     const root_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
@@ -31,6 +38,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "tsdb", .module = tsdb_mod },
             .{ .name = "compaction", .module = compaction_mod },
             .{ .name = "server", .module = server_mod },
+            .{ .name = "nng", .module = nng_mod },
         },
     });
 
@@ -39,6 +47,9 @@ pub fn build(b: *std.Build) void {
         .name = "tsdb",
         .root_module = root_mod,
     });
+    exe.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/include" });
+    exe.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/lib" });
+    exe.root_module.linkSystemLibrary("nng", .{});
     b.installArtifact(exe);
 
     // 运行命令
@@ -76,7 +87,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     server_test_mod.addImport("tsdb", tsdb_mod);
+    server_test_mod.addImport("nng", nng_mod);
     const t_server = b.addTest(.{ .root_module = server_test_mod });
+    t_server.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/include" });
+    t_server.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/lib" });
+    t_server.root_module.linkSystemLibrary("nng", .{});
     test_step.dependOn(&b.addRunArtifact(t_server).step);
 
     const arrow_test_mod = b.createModule(.{

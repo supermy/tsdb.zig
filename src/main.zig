@@ -15,32 +15,71 @@ pub fn main(init: std.process.Init) !void {
         return;
     };
 
+    const log = std.log.scoped(.main);
+
     if (std.mem.eql(u8, command, "serve")) {
         const port = if (arg_iter.next()) |p| try std.fmt.parseInt(u16, p, 10) else 8080;
         try cmdServe(allocator, port);
     } else if (std.mem.eql(u8, command, "write")) {
         const line = arg_iter.next() orelse {
-            std.log.err("Usage: tsdb write <line_protocol>");
+            log.err("Usage: tsdb write <line_protocol>", .{});
             return error.MissingArgument;
         };
         try cmdWrite(allocator, line);
     } else if (std.mem.eql(u8, command, "query")) {
         const series_id_str = arg_iter.next() orelse {
-            std.log.err("Usage: tsdb query <series_id> <start> <end>");
+            log.err("Usage: tsdb query <series_id> <start> <end>", .{});
             return error.MissingArgument;
         };
         const start_str = arg_iter.next() orelse {
-            std.log.err("Usage: tsdb query <series_id> <start> <end>");
+            log.err("Usage: tsdb query <series_id> <start> <end>", .{});
             return error.MissingArgument;
         };
         const end_str = arg_iter.next() orelse {
-            std.log.err("Usage: tsdb query <series_id> <start> <end>");
+            log.err("Usage: tsdb query <series_id> <start> <end>", .{});
             return error.MissingArgument;
         };
         const series_id = try std.fmt.parseInt(u64, series_id_str, 10);
         const start = try std.fmt.parseInt(i64, start_str, 10);
         const end = try std.fmt.parseInt(i64, end_str, 10);
         try cmdQuery(allocator, series_id, start, end);
+    } else if (std.mem.eql(u8, command, "nngwrite")) {
+        const addr = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngwrite <addr> <line>", .{});
+            return error.MissingArgument;
+        };
+        const line = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngwrite <addr> <line>", .{});
+            return error.MissingArgument;
+        };
+        try cmdNngWrite(allocator, addr, line);
+    } else if (std.mem.eql(u8, command, "nngquery")) {
+        const addr = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngquery <addr> <sid> <start> <end>", .{});
+            return error.MissingArgument;
+        };
+        const sid_str = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngquery <addr> <sid> <start> <end>", .{});
+            return error.MissingArgument;
+        };
+        const start_str = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngquery <addr> <sid> <start> <end>", .{});
+            return error.MissingArgument;
+        };
+        const end_str = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngquery <addr> <sid> <start> <end>", .{});
+            return error.MissingArgument;
+        };
+        const sid = try std.fmt.parseInt(u64, sid_str, 10);
+        const start = try std.fmt.parseInt(i64, start_str, 10);
+        const end = try std.fmt.parseInt(i64, end_str, 10);
+        try cmdNngQuery(allocator, addr, sid, start, end);
+    } else if (std.mem.eql(u8, command, "nngstats")) {
+        const addr = arg_iter.next() orelse {
+            log.err("Usage: tsdb nngstats <addr>", .{});
+            return error.MissingArgument;
+        };
+        try cmdNngStats(allocator, addr);
     } else if (std.mem.eql(u8, command, "compact")) {
         try cmdCompact(allocator);
     } else if (std.mem.eql(u8, command, "flush")) {
@@ -55,11 +94,14 @@ fn printUsage(io: std.Io) !void {
         \\tsdb.zig - Time Series Database Engine
         \\
         \\Usage:
-        \\  tsdb serve [port]          Start HTTP server (default 8080)
-        \\  tsdb write <line>          Write a line protocol point
-        \\  tsdb query <sid> <s> <e>   Query range for series
-        \\  tsdb compact               Run compaction on data dir
-        \\  tsdb flush                 Flush hot partition to disk
+        \\  tsdb serve [port]              Start NNG server (default 8080)
+        \\  tsdb write <line>              Write a line protocol point
+        \\  tsdb query <sid> <s> <e>       Query range for series
+        \\  tsdb nngwrite <addr> <line>    Write via NNG req/rep
+        \\  tsdb nngquery <addr> <sid> <s> <e>  Query via NNG req/rep
+        \\  tsdb nngstats <addr>           Stats via NNG req/rep
+        \\  tsdb compact                   Run compaction on data dir
+        \\  tsdb flush                     Flush hot partition to disk
         \\
     ;
     try std.Io.File.writeStreamingAll(std.Io.File.stdout(), io, usage);
@@ -73,7 +115,67 @@ fn cmdServe(allocator: std.mem.Allocator, port: u16) !void {
     try srv.start();
 }
 
+fn cmdNngWrite(allocator: std.mem.Allocator, addr: []const u8, line: []const u8) !void {
+    const nng = @import("nng");
+    const log = std.log.scoped(.main);
+    var sock: nng.nng_socket = undefined;
+    try nng.check(nng.nng_req0_open(&sock));
+    defer _ = nng.nng_close(sock);
+    const addr_z = try allocator.dupeZ(u8, addr);
+    defer allocator.free(addr_z);
+    try nng.check(nng.nng_dial(sock, addr_z, null, 0));
+
+    var req_buf: [4096]u8 = undefined;
+    const req = try std.fmt.bufPrint(&req_buf, "{{\"cmd\":\"write\",\"data\":\"{s}\"}}", .{line});
+    try nng.check(nng.nng_send(sock, req.ptr, req.len, 0));
+
+    var resp_buf: [4096]u8 = undefined;
+    var resp_len: usize = resp_buf.len;
+    try nng.check(nng.nng_recv(sock, &resp_buf, &resp_len, 0));
+    log.info("Response: {s}", .{resp_buf[0..resp_len]});
+}
+
+fn cmdNngQuery(allocator: std.mem.Allocator, addr: []const u8, sid: u64, start: i64, end: i64) !void {
+    const nng = @import("nng");
+    const log = std.log.scoped(.main);
+    var sock: nng.nng_socket = undefined;
+    try nng.check(nng.nng_req0_open(&sock));
+    defer _ = nng.nng_close(sock);
+    const addr_z = try allocator.dupeZ(u8, addr);
+    defer allocator.free(addr_z);
+    try nng.check(nng.nng_dial(sock, addr_z, null, 0));
+
+    var req_buf: [4096]u8 = undefined;
+    const req = try std.fmt.bufPrint(&req_buf, "{{\"cmd\":\"query\",\"series_id\":{d},\"start\":{d},\"end\":{d}}}", .{ sid, start, end });
+    try nng.check(nng.nng_send(sock, req.ptr, req.len, 0));
+
+    var resp_buf: [16384]u8 = undefined;
+    var resp_len: usize = resp_buf.len;
+    try nng.check(nng.nng_recv(sock, &resp_buf, &resp_len, 0));
+    log.info("Response: {s}", .{resp_buf[0..resp_len]});
+}
+
+fn cmdNngStats(allocator: std.mem.Allocator, addr: []const u8) !void {
+    const nng = @import("nng");
+    const log = std.log.scoped(.main);
+    var sock: nng.nng_socket = undefined;
+    try nng.check(nng.nng_req0_open(&sock));
+    defer _ = nng.nng_close(sock);
+    const addr_z = try allocator.dupeZ(u8, addr);
+    defer allocator.free(addr_z);
+    try nng.check(nng.nng_dial(sock, addr_z, null, 0));
+
+    const req = "{\"cmd\":\"stats\"}";
+    try nng.check(nng.nng_send(sock, req.ptr, req.len, 0));
+
+    var resp_buf: [4096]u8 = undefined;
+    var resp_len: usize = resp_buf.len;
+    try nng.check(nng.nng_recv(sock, &resp_buf, &resp_len, 0));
+    log.info("Response: {s}", .{resp_buf[0..resp_len]});
+}
+
 fn cmdWrite(allocator: std.mem.Allocator, line: []const u8) !void {
+    const log = std.log.scoped(.main);
     var engine = try tsdb.Engine.init(allocator, "data");
     defer engine.deinit();
 
@@ -88,35 +190,38 @@ fn cmdWrite(allocator: std.mem.Allocator, line: []const u8) !void {
             allocator.free(p.key.tags);
         }
         try engine.write(p.key, p.point);
-        std.log.info("Written: {s} = {d} @ {d}", .{ p.key.metric, p.point.value, p.point.timestamp });
+        log.info("Written: {s} = {d} @ {d}", .{ p.key.metric, p.point.value, p.point.timestamp });
     } else {
-        std.log.err("Failed to parse line protocol", .{});
+        log.err("Failed to parse line protocol", .{});
     }
 }
 
 fn cmdQuery(allocator: std.mem.Allocator, series_id: u64, start: i64, end: i64) !void {
+    const log = std.log.scoped(.main);
     var engine = try tsdb.Engine.init(allocator, "data");
     defer engine.deinit();
 
     const points = try engine.queryRange(series_id, start, end, allocator);
     defer allocator.free(points);
 
-    std.log.info("Query returned {d} points:", .{points.len});
+    log.info("Query returned {d} points:", .{points.len});
     for (points) |p| {
-        std.log.info("  timestamp={d} value={d}", .{ p.timestamp, p.value });
+        log.info("  timestamp={d} value={d}", .{ p.timestamp, p.value });
     }
 }
 
 fn cmdCompact(allocator: std.mem.Allocator) !void {
-    std.log.info("Compaction stub: would compact partitions in data/", .{});
+    const log = std.log.scoped(.main);
+    log.info("Compaction stub: would compact partitions in data/", .{});
     _ = allocator;
     // 实际实现：加载多个小分区，合并，去重，写回磁盘
 }
 
 fn cmdFlush(allocator: std.mem.Allocator) !void {
+    const log = std.log.scoped(.main);
     var engine = try tsdb.Engine.init(allocator, "data");
     defer engine.deinit();
 
     try engine.flushHotPartition();
-    std.log.info("Hot partition flushed.", .{});
+    log.info("Hot partition flushed.", .{});
 }
