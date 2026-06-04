@@ -7,7 +7,7 @@
 - **列式存储**：每个时间序列独立维护时间戳数组与数值数组，缓存友好且便于向量化处理。
 - **时间分区**：数据按小时（可配置）切分为内存热分区，避免全表扫描并支持高效 TTL 与归档。
 - **LSM-like 分层**：热分区（内存）→ 刷盘生成不可变文件 → 后台 Compaction 合并去重。
-- **InfluxDB Line Protocol**：内置行协议解析器，兼容现有采集端（Telegraf、Prometheus remote_write 等）。
+- **InfluxDB Line Protocol**：内置行协议解析器，兼容现有采集端（Telegraf、Prometheus remote_write 等）。时间戳可选，省略时自动使用服务器当前时间。
 - **标签索引**：自动构建 `key=value` 到序列 ID 的倒排索引，支持按标签过滤。
 - **NNG 高性能 API**：基于 NNG (Nanomsg Next Generation) 的 req/rep 模式，提供 `write`、`query`、`stats` 命令。
 - **内嵌 Web 测试页面**：启动服务后自动提供类似 llama-server 的默认测试页面（`http://localhost:port+1`）。
@@ -104,8 +104,11 @@ Memory Partition Sort:
 # 启动 NNG 服务（默认端口 8080，HTTP 测试页面在 8081）
 ./tsdb serve 8080
 
-# 通过 NNG 写入单条数据
+# 通过 NNG 写入单条数据（时间戳可选，省略时使用当前时间）
 ./tsdb nngwrite "tcp://127.0.0.1:8080" "cpu,host=server01 value=42.0"
+
+# 通过 NNG 写入带时间戳的数据（纳秒级时间戳）
+./tsdb nngwrite "tcp://127.0.0.1:8080" "cpu,host=server01 value=42.0 1609459200000000000"
 
 # 通过 NNG 查询序列范围
 ./tsdb nngquery "tcp://127.0.0.1:8080" <series_id> <start_ms> <end_ms>

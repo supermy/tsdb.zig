@@ -623,11 +623,12 @@ pub const Engine = struct {
     pub fn parseLineProtocol(self: *Engine, line: []const u8) !?struct { key: SeriesKey, point: DataPoint } {
         // 找到第一个空格（tags 和 fields 之间）
         const fields_start = std.mem.indexOf(u8, line, " ") orelse return null;
-        const ts_start = std.mem.indexOfPos(u8, line, fields_start + 1, " ") orelse return null;
+        // 第二个空格可选：fields 和时间戳之间；如果不存在则使用当前时间
+        const ts_start = std.mem.indexOfPos(u8, line, fields_start + 1, " ");
 
         const measurement_tags = line[0..fields_start];
-        const fields_str = line[fields_start + 1 .. ts_start];
-        const ts_str = line[ts_start + 1 ..];
+        const fields_str = line[fields_start + 1 .. if (ts_start) |s| s else line.len];
+        const ts_str = if (ts_start) |s| line[s + 1 ..] else "";
 
         // 解析 measurement 和 tags
         var parts = std.mem.splitScalar(u8, measurement_tags, ',');
@@ -668,9 +669,17 @@ pub const Engine = struct {
             }
         };
 
-        // 解析时间戳（纳秒 -> 毫秒）
-        const ts_ns = try std.fmt.parseInt(i64, ts_str, 10);
-        const ts_ms = @divFloor(ts_ns, 1_000_000);
+        // 解析时间戳（纳秒 -> 毫秒），省略时使用当前时间
+        const ts_ms: i64 = blk: {
+            if (ts_str.len > 0) {
+                const ts_ns = try std.fmt.parseInt(i64, ts_str, 10);
+                break :blk @divFloor(ts_ns, 1_000_000);
+            } else {
+                var tv: std.c.timeval = undefined;
+                _ = std.c.gettimeofday(&tv, null);
+                break :blk tv.sec * 1000 + @divFloor(tv.usec, 1000);
+            }
+        };
 
         const tags_slice = try self.allocator.dupe(Tag, tags.items);
         errdefer self.allocator.free(tags_slice);
@@ -1057,6 +1066,32 @@ test "parseLineProtocol invalid input returns null" {
     // 缺少 field 和 timestamp
     const result = try engine.parseLineProtocol("cpu");
     try std.testing.expect(result == null);
+}
+
+test "parseLineProtocol without timestamp uses current time" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_lp_notime");
+    defer engine.deinit();
+    defer fs.deleteTree("tmp_test_lp_notime") catch {};
+
+    const line = "cpu,host=A usage=45i";
+    const result = try engine.parseLineProtocol(line);
+    try std.testing.expect(result != null);
+    defer {
+        allocator.free(result.?.key.metric);
+        for (result.?.key.tags) |tag| {
+            allocator.free(tag.key);
+            allocator.free(tag.value);
+        }
+        allocator.free(result.?.key.tags);
+    }
+    try std.testing.expectEqualStrings("cpu", result.?.key.metric);
+    try std.testing.expectEqual(@as(f64, 45.0), result.?.point.value);
+    // 时间戳应在当前时间附近（1000ms 容差）
+    var tv: std.c.timeval = undefined;
+    _ = std.c.gettimeofday(&tv, null);
+    const now_ms = tv.sec * 1000 + @divFloor(tv.usec, 1000);
+    try std.testing.expect(@abs(result.?.point.timestamp - now_ms) < 1000);
 }
 
 test "parseLineProtocol returns deep copy" {
