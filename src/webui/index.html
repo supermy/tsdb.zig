@@ -88,10 +88,13 @@
     <!-- Stats Panel -->
     <section class="fade-in">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold flex items-center gap-2">
-          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-          Server Stats
-        </h2>
+        <div>
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Server Stats
+          </h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time server statistics showing partition and storage state.</p>
+        </div>
         <div class="flex items-center gap-3">
           <button onclick="exportStats()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -103,7 +106,7 @@
           </label>
         </div>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
           <p class="text-sm text-gray-500 dark:text-gray-400">Hot Partitions</p>
           <p id="stat-hot" class="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-1">-</p>
@@ -116,15 +119,37 @@
           <p class="text-sm text-gray-500 dark:text-gray-400">Disk Partitions</p>
           <p id="stat-disk" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">-</p>
         </div>
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Total Partitions</p>
+          <p id="stat-total" class="text-3xl font-bold text-gray-700 dark:text-gray-200 mt-1">-</p>
+        </div>
+      </div>
+      <!-- Storage State -->
+      <div class="mt-4 bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <span id="storage-state-text" class="text-sm text-gray-600 dark:text-gray-300 font-medium">Storage: -</span>
+          <span id="storage-state-badge" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">Idle</span>
+        </div>
+        <div class="w-full h-3 rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
+          <div id="storage-bar-hot" class="bg-primary-500 h-full transition-all" style="width:0%"></div>
+          <div id="storage-bar-readonly" class="bg-amber-500 h-full transition-all" style="width:0%"></div>
+          <div id="storage-bar-disk" class="bg-emerald-500 h-full transition-all" style="width:0%"></div>
+        </div>
+        <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary-500"></span> Hot</div>
+          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Readonly</div>
+          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Disk</div>
+        </div>
       </div>
     </section>
 
     <!-- Write Test -->
     <section class="fade-in">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+      <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
         Write Test
       </h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Write single or multiple InfluxDB line protocol data points. Use presets for quick examples.</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-gray-800/50 flex flex-wrap gap-2">
           <span class="text-xs font-medium text-gray-500 dark:text-gray-400 self-center mr-1">Presets:</span>
@@ -195,10 +220,11 @@
 
     <!-- Batch Write Test -->
     <section class="fade-in">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+      <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
         Batch Write Test
       </h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Generate and write large batches of simulated time-series data.</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -207,11 +233,11 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series Count</label>
-            <input id="batch-series" type="number" value="5" min="1" max="1000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+            <input id="batch-series" type="number" value="10" min="1" max="1000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Points / Series</label>
-            <input id="batch-points" type="number" value="10" min="1" max="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+            <input id="batch-points" type="number" value="500" min="1" max="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Range (hours)</label>
@@ -259,10 +285,11 @@
 
     <!-- Query Test -->
     <section class="fade-in">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+      <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         Query Test
       </h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Query data by series ID and time range. Leave time fields empty to query all data.</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -270,11 +297,11 @@
             <input id="query-series" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="cpu,host=server01">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time (ns)</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time (ns, optional)</label>
             <input id="query-start" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="1620000000000000000">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time (ns)</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time (ns, optional)</label>
             <input id="query-end" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="1620003600000000000">
           </div>
         </div>
@@ -284,6 +311,9 @@
             Query
           </button>
           <button onclick="fillNowRange()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Now - 1h</button>
+          <button onclick="queryAllTime()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Query All Time</button>
+          <button onclick="queryLastHour()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Query Last Hour</button>
+          <button onclick="loadSampleSeriesId()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Load Sample Series ID</button>
           <div id="query-latency" class="text-sm text-gray-500 dark:text-gray-400 hidden">
             Latency: <span class="font-mono font-medium text-gray-700 dark:text-gray-200">-</span> ms
           </div>
@@ -330,10 +360,11 @@
 
     <!-- Import / Export -->
     <section class="fade-in">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+      <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
         Import / Export
       </h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Import data from files or export query results.</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Import -->
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5">
@@ -477,9 +508,36 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         lastStatsData = data;
-        setText(document.getElementById('stat-hot'), data.hot_partitions ?? data.hot ?? '-');
-        setText(document.getElementById('stat-readonly'), data.readonly_partitions ?? data.readonly ?? '-');
-        setText(document.getElementById('stat-disk'), data.disk_partitions ?? data.disk ?? '-');
+        const hot = data.hot_partitions ?? data.hot ?? 0;
+        const readonly = data.readonly_partitions ?? data.readonly ?? 0;
+        const disk = data.disk_partitions ?? data.disk ?? 0;
+        const total = readonly + disk + 1;
+        setText(document.getElementById('stat-hot'), hot);
+        setText(document.getElementById('stat-readonly'), readonly);
+        setText(document.getElementById('stat-disk'), disk);
+        setText(document.getElementById('stat-total'), total);
+
+        // Storage state text and badge
+        const stateText = `Storage: ${total} partitions, ${readonly} readonly, ${disk} on disk`;
+        setText(document.getElementById('storage-state-text'), stateText);
+        const badge = document.getElementById('storage-state-badge');
+        if (hot > 0) {
+          setText(badge, 'Active');
+          badge.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium';
+        } else {
+          setText(badge, 'Idle');
+          badge.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium';
+        }
+
+        // Progress bar
+        const totalPartitions = total;
+        const hotPct = totalPartitions > 0 ? (1 / totalPartitions) * 100 : 0;
+        const readonlyPct = totalPartitions > 0 ? (readonly / totalPartitions) * 100 : 0;
+        const diskPct = totalPartitions > 0 ? (disk / totalPartitions) * 100 : 0;
+        document.getElementById('storage-bar-hot').style.width = hotPct + '%';
+        document.getElementById('storage-bar-readonly').style.width = readonlyPct + '%';
+        document.getElementById('storage-bar-disk').style.width = diskPct + '%';
+
         updateStatus(true);
       } catch (e) {
         updateStatus(false);
@@ -561,30 +619,42 @@
     async function doWrite() {
       const input = document.getElementById('write-input').value.trim();
       if (!input) return alert('Please enter InfluxDB line protocol data');
+      const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (!lines.length) return alert('Please enter InfluxDB line protocol data');
       const btn = document.getElementById('write-btn');
       btn.disabled = true;
       const start = performance.now();
+      let okCount = 0;
+      let failCount = 0;
       try {
-        const res = await fetch('/api/write', {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          mode: 'cors',
-          body: input
-        });
-        const latency = Math.round(performance.now() - start);
-        const text = await res.text();
-        let json;
-        try { json = JSON.parse(text); } catch { json = null; }
-        const ok = res.ok;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          try {
+            const res = await fetch('/api/write', {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              mode: 'cors',
+              body: line
+            });
+            if (res.ok) { okCount++; }
+            else { failCount++; }
+          } catch (e) {
+            failCount++;
+          }
+          if (i % 10 === 0) await new Promise(r => requestAnimationFrame(r));
+        }
+        const totalLatency = Math.round(performance.now() - start);
+        const avgLatency = lines.length > 0 ? Math.round(totalLatency / lines.length) : 0;
+        const ok = failCount === 0;
         const resultEl = document.getElementById('write-result');
         show(resultEl);
         document.getElementById('write-status-icon').innerHTML = statusIcon(ok);
-        document.getElementById('write-status').textContent = ok ? `Success (${res.status})` : `Error (${res.status})`;
-        document.getElementById('write-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
-        document.getElementById('write-output').textContent = json ? JSON.stringify(json, null, 2) : text;
-        document.getElementById('write-latency').querySelector('span').textContent = latency;
+        document.getElementById('write-status').textContent = `${lines.length} lines: ${okCount} OK, ${failCount} failed`;
+        document.getElementById('write-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400');
+        document.getElementById('write-output').textContent = `Total: ${lines.length}\nOK: ${okCount}\nFailed: ${failCount}\nTotal Latency: ${totalLatency} ms\nAvg Latency: ${avgLatency} ms`;
+        document.getElementById('write-latency').querySelector('span').textContent = `${totalLatency} ms (avg ${avgLatency} ms)`;
         show(document.getElementById('write-latency'));
-        if (ok) pushPerf('write', latency);
+        if (okCount > 0) pushPerf('write', avgLatency);
       } catch (e) {
         const resultEl = document.getElementById('write-result');
         show(resultEl);
@@ -643,8 +713,8 @@
 
     function generateBatchData() {
       const metric = document.getElementById('batch-metric').value.trim() || 'cpu';
-      const seriesCount = parseInt(document.getElementById('batch-series').value) || 5;
-      const pointsPerSeries = parseInt(document.getElementById('batch-points').value) || 10;
+      const seriesCount = parseInt(document.getElementById('batch-series').value) || 10;
+      const pointsPerSeries = parseInt(document.getElementById('batch-points').value) || 500;
       const hours = parseFloat(document.getElementById('batch-hours').value) || 1;
       const now = Date.now() * 1e6;
       const rangeNs = hours * 3600e9;
@@ -747,11 +817,37 @@
       document.getElementById('query-start').value = String(hourAgo);
       document.getElementById('query-end').value = String(now);
     }
+    function queryAllTime() {
+      document.getElementById('query-start').value = '0';
+      document.getElementById('query-end').value = String(Date.now() * 1e6);
+      doQuery();
+    }
+    function queryLastHour() {
+      fillNowRange();
+      doQuery();
+    }
+    async function loadSampleSeriesId() {
+      const sampleIds = ['cpu,host=server01', 'cpu,host=server01,region=us-west', 'memory,host=server01'];
+      try {
+        const res = await fetch('/api/series', { mode: 'cors' });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const id = typeof data[0] === 'string' ? data[0] : (data[0].series_id ?? data[0].id ?? JSON.stringify(data[0]));
+            document.getElementById('query-series').value = id;
+            return;
+          }
+        }
+      } catch (e) {}
+      document.getElementById('query-series').value = sampleIds[0];
+    }
     async function doQuery() {
       const series = document.getElementById('query-series').value.trim();
-      const start = document.getElementById('query-start').value.trim();
-      const end = document.getElementById('query-end').value.trim();
-      if (!series || !start || !end) return alert('Please fill all query fields');
+      if (!series) return alert('Please enter a series ID');
+      let start = document.getElementById('query-start').value.trim();
+      let end = document.getElementById('query-end').value.trim();
+      if (!start) start = '0';
+      if (!end) end = String(Date.now() * 1e6);
       const btn = document.getElementById('query-btn');
       btn.disabled = true;
       const startPerf = performance.now();
