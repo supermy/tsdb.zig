@@ -9,8 +9,10 @@
 - **LSM-like 分层**：热分区（内存）→ 刷盘生成不可变文件 → 后台 Compaction 合并去重。
 - **InfluxDB Line Protocol**：内置行协议解析器，兼容现有采集端（Telegraf、Prometheus remote_write 等）。
 - **标签索引**：自动构建 `key=value` 到序列 ID 的倒排索引，支持按标签过滤。
-- **HTTP API**：提供 `/write`、`/query`、`/stats` 端点，便于集成到监控与告警系统。
-- **Zig 0.16 原生兼容**：完全基于 Zig 0.16.0 标准库，无外部依赖。
+- **NNG 高性能 API**：基于 NNG (Nanomsg Next Generation) 的 req/rep 模式，提供 `write`、`query`、`stats` 命令。
+- **内嵌 Web 测试页面**：启动服务后自动提供类似 llama-server 的默认测试页面（`http://localhost:port+1`）。
+- **GPU 加速抽象层**：可插拔后端设计（CUDA / Metal / OpenCL），默认 CPU SIMD fallback。
+- **Zig 0.16 原生兼容**：完全基于 Zig 0.16.0 标准库，无外部依赖（除 NNG 库外）。
 
 ## 架构概览
 
@@ -44,6 +46,7 @@
 ### 环境要求
 
 - [Zig](https://ziglang.org/) 0.16.0
+- [NNG](https://nng.nanomsg.org/) 1.11+ (用于高性能 API 服务)
 - macOS / Linux / Windows (POSIX 兼容环境)
 
 ### 构建
@@ -98,40 +101,79 @@ Memory Partition Sort:
 ## CLI 用法
 
 ```bash
-# 启动 HTTP 服务（默认端口 8080）
-zig build run -- serve 8080
+# 启动 NNG 服务（默认端口 8080，HTTP 测试页面在 8081）
+./tsdb serve 8080
 
-# 写入单条数据
-zig build run -- write "cpu,host=server01 value=42.0"
+# 通过 NNG 写入单条数据
+./tsdb nngwrite "tcp://127.0.0.1:8080" "cpu,host=server01 value=42.0"
 
-# 查询序列范围
-zig build run -- query <series_id> <start_ms> <end_ms>
+# 通过 NNG 查询序列范围
+./tsdb nngquery "tcp://127.0.0.1:8080" <series_id> <start_ms> <end_ms>
+
+# 通过 NNG 获取统计
+./tsdb nngstats "tcp://127.0.0.1:8080"
+
+# 本地写入（直接操作数据文件）
+./tsdb write "cpu,host=server01 value=42.0"
+
+# 本地查询
+./tsdb query <series_id> <start_ms> <end_ms>
 
 # 手动刷盘
-zig build run -- flush
+./tsdb flush
+
+# 合并分区
+./tsdb compact
 ```
 
-## HTTP API
+## API 接口
 
-### 写入数据
+### NNG Req/Rep 接口（高性能）
 
+NNG 服务使用 JSON 消息格式：
+
+**写入数据**
 ```bash
-curl -X POST http://localhost:8080/write \
-  -d 'cpu_usage,host=server01,dc=us-east value=75.2 1699123200000'
+echo '{"cmd":"write","data":"cpu_usage,host=server01,dc=us-east value=75.2 1699123200000"}' | nng req tcp://127.0.0.1:8080
 ```
 
-### 查询数据
-
+**查询数据**
 ```bash
-curl -X POST http://localhost:8080/query \
-  -d '{"series_id": 123456, "start": 1699123200000, "end": 1699126800000}'
+echo '{"cmd":"query","series_id":123456,"start":1699123200000,"end":1699126800000}' | nng req tcp://127.0.0.1:8080
 ```
 
-### 服务状态
-
+**服务状态**
 ```bash
-curl http://localhost:8080/stats
+echo '{"cmd":"stats"}' | nng req tcp://127.0.0.1:8080
 ```
+
+### HTTP 测试接口（Web UI）
+
+启动服务后，浏览器访问 `http://localhost:8081`（假设 NNG 端口为 8080）：
+
+- `GET /` 或 `GET /index.html` → 内嵌测试页面
+- `POST /api/write` → 写入数据（body 为 line protocol）
+- `GET /api/query?series_id=...&start=...&end=...` → 查询数据
+- `GET /api/stats` → 服务器统计
+
+## GPU 加速
+
+TSDB.zig 提供可插拔的 GPU 加速抽象层，支持以下后端：
+
+| 后端 | 状态 | 说明 |
+|------|------|------|
+| CPU SIMD | ✅ 可用 | Zig `@Vector` 实现的 fallback，零外部依赖 |
+| CUDA | 🚧 预留 | 通过 ` GpuBackend.cuda ` 编译时选择 |
+| Metal | 🚧 预留 | macOS / iOS GPU 加速 |
+| OpenCL | 🚧 预留 | 跨平台 GPU 加速 |
+
+适用场景：
+- 大规模并行聚合（SUM / AVG / MIN / MAX）
+- 向量化范围扫描
+- 数据压缩/解压
+- 实时异常检测
+
+详见 [docs/GPU_ACCELERATION.md](docs/GPU_ACCELERATION.md)。
 
 ## 项目结构
 
@@ -141,7 +183,10 @@ curl http://localhost:8080/stats
 ├── src/
 │   ├── tsdb.zig           # 核心引擎：Engine、MemoryPartition、SeriesData
 │   ├── main.zig           # CLI 入口
-│   ├── server.zig         # HTTP API Server
+│   ├── server.zig         # NNG API Server + HTTP 测试页面服务
+│   ├── http_server.zig    # POSIX socket 极简 HTTP 服务器
+│   ├── nng.zig            # NNG C 绑定
+│   ├── gpu_acceleration.zig # GPU 加速抽象层
 │   ├── compaction.zig     # 分区合并与去重
 │   ├── fs_helper.zig      # POSIX 文件系统封装（Zig 0.16 兼容）
 │   ├── fdap/
@@ -150,9 +195,15 @@ curl http://localhost:8080/stats
 │       ├── arrow.zig      # Arrow FFI 接口
 │       ├── datafusion.zig # DataFusion 集成
 │       └── parquet.zig    # Parquet 读写支持
+├── webui/
+│   └── index.html         # 默认测试页面（单页应用）
 ├── tests/
 │   ├── integration.zig    # 端到端集成测试
 │   └── benchmark.zig      # 性能基准测试
+├── docs/
+│   └── GPU_ACCELERATION.md # GPU 加速设计文档
+├── README.md
+├── CHANGELOG.md
 └── TODOS.md               # 开发计划
 ```
 
@@ -211,6 +262,13 @@ defer allocator.free(points);
 
 - `Engine` 内部使用自旋锁（`std.atomic.Mutex` 包装器）保护热分区与索引。
 - 查询路径在读取磁盘分区时不上锁，磁盘分区为不可变结构，天然线程安全。
+- NNG 服务器与 HTTP 测试服务器运行在不同线程中，均通过 Engine 的锁保证并发安全。
+
+### GPU 加速
+
+- 通过 `GpuAccelerator` 结构体提供统一接口，`comptime` 选择后端。
+- CPU SIMD fallback 使用 Zig `@Vector(4, f64)` 配合 `@reduce` 实现向量化主循环。
+- 预留 CUDA / Metal / OpenCL 扩展路径，未来可通过 `build.zig` 条件编译切换。
 
 ### 兼容性说明
 
@@ -220,6 +278,7 @@ defer allocator.free(points);
 - 使用 `std.process.Init` 替代已移除的 `std.process.argsAlloc`
 - 使用 `std.heap.page_allocator` 替代已移除的 `std.heap.GeneralPurposeAllocator`
 - 自定义 `fs_helper.zig` 封装 POSIX 文件操作，绕过 `std.fs` 的 API 变更
+- 使用 POSIX socket 实现 HTTP 服务器（`std.net` 已移除）
 
 ## 路线图
 
@@ -229,6 +288,7 @@ defer allocator.free(points);
 - [ ] WAL（Write-Ahead Log）保证崩溃安全
 - [ ] 多线程 Compaction
 - [ ] 分布式分片（Sharding）
+- [ ] CUDA / Metal / OpenCL GPU 后端实现
 
 ## License
 

@@ -1,6 +1,7 @@
 const std = @import("std");
 const tsdb = @import("tsdb");
 const nng = @import("nng");
+const http_server = @import("http_server");
 
 /// NNG-based high-performance API server using req/rep pattern
 /// Message format: JSON {"cmd":"write|query|stats", ...}
@@ -19,6 +20,15 @@ pub const Server = struct {
     }
 
     pub fn start(self: *Server) !void {
+        const srv_log = std.log.scoped(.server);
+
+        // 启动 HTTP 测试页面服务线程（port + 1）
+        const http_port = self.port + 1;
+        const http_srv = http_server.HttpServer.init(self.allocator, self.engine, http_port);
+        const http_thread = try std.Thread.spawn(.{}, httpServerThread, .{http_srv});
+        http_thread.detach();
+
+        // 启动 NNG 服务
         var sock: nng.nng_socket = undefined;
         try nng.check(nng.nng_rep0_open(&sock));
         defer _ = nng.nng_close(sock);
@@ -27,14 +37,20 @@ pub const Server = struct {
         const addr = try std.fmt.bufPrintZ(&addr_buf, "tcp://0.0.0.0:{d}", .{self.port});
         try nng.check(nng.nng_listen(sock, addr, null, 0));
 
-        const srv_log = std.log.scoped(.server);
         srv_log.info("NNG server listening on {s}", .{addr});
+        srv_log.info("HTTP test console available at http://0.0.0.0:{d}", .{http_port});
 
         while (true) {
             self.runOnce(sock) catch |err| {
                 srv_log.err("runOnce error: {}", .{err});
             };
         }
+    }
+
+    fn httpServerThread(http_srv: http_server.HttpServer) void {
+        http_srv.start() catch |err| {
+            std.log.scoped(.http).err("HTTP server error: {s}", .{@errorName(err)});
+        };
     }
 
     /// Process a single request/response cycle using stack buffer

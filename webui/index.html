@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TSDB.zig - Test Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+            dark: { bg: '#0f172a', card: '#1e293b', border: '#334155' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .logo-ascii {
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.2;
+      white-space: pre;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    /* Animations */
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-dot { animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fade-in 0.3s ease-out; }
+    /* Table */
+    .data-table th { position: sticky; top: 0; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100 min-h-screen transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="logo-ascii text-primary-600 dark:text-primary-400 text-xs select-none hidden sm:block">
+╔═══════╗
+║ TSDB  ║
+╚═══════╝
+        </div>
+        <div class="sm:hidden text-primary-600 dark:text-primary-400 text-2xl">🦎</div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">TSDB.zig</h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">Test Console</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <!-- Server Status -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800">
+          <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse-dot"></span>
+          <span id="status-text" class="text-sm font-medium text-gray-600 dark:text-gray-300">Checking...</span>
+        </div>
+        <!-- Theme Toggle -->
+        <button id="theme-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Toggle theme">
+          <svg id="sun-icon" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+          <svg id="moon-icon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Stats Panel -->
+    <section class="fade-in">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          Server Stats
+        </h2>
+        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+          <input id="auto-refresh" type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+          Auto-refresh
+        </label>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Hot Partitions</p>
+          <p id="stat-hot" class="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-1">-</p>
+        </div>
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Readonly Partitions</p>
+          <p id="stat-readonly" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">-</p>
+        </div>
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Disk Partitions</p>
+          <p id="stat-disk" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">-</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Write Test -->
+    <section class="fade-in">
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        Write Test
+      </h2>
+      <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-gray-800/50 flex flex-wrap gap-2">
+          <button onclick="insertSampleWrite()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">Insert Sample</button>
+          <button onclick="clearWrite()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">Clear</button>
+        </div>
+        <div class="p-4">
+          <textarea id="write-input" rows="6" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all resize-y" placeholder="cpu,host=server01,region=us-west usage=75.5,temperature=42.0 1620000000000000000"></textarea>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <button onclick="doWrite()" id="write-btn" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+              Write
+            </button>
+            <div id="write-latency" class="text-sm text-gray-500 dark:text-gray-400 hidden">
+              Latency: <span class="font-mono font-medium text-gray-700 dark:text-gray-200">-</span> ms
+            </div>
+          </div>
+        </div>
+        <div id="write-result" class="hidden border-t border-gray-100 dark:border-dark-border">
+          <div class="p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span id="write-status-icon"></span>
+              <span id="write-status" class="font-medium text-sm"></span>
+            </div>
+            <pre id="write-output" class="font-mono text-xs bg-gray-50 dark:bg-gray-900 rounded-lg p-3 overflow-auto max-h-60 border border-gray-200 dark:border-gray-700"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Query Test -->
+    <section class="fade-in">
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        Query Test
+      </h2>
+      <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series ID</label>
+            <input id="query-series" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="cpu,host=server01">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time (ns)</label>
+            <input id="query-start" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="1620000000000000000">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time (ns)</label>
+            <input id="query-end" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="1620003600000000000">
+          </div>
+        </div>
+        <div class="px-4 pb-4 flex flex-wrap items-center gap-3">
+          <button onclick="doQuery()" id="query-btn" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            Query
+          </button>
+          <button onclick="fillNowRange()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Now - 1h</button>
+          <div id="query-latency" class="text-sm text-gray-500 dark:text-gray-400 hidden">
+            Latency: <span class="font-mono font-medium text-gray-700 dark:text-gray-200">-</span> ms
+          </div>
+        </div>
+        <div id="query-result" class="hidden border-t border-gray-100 dark:border-dark-border">
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span id="query-status-icon"></span>
+                <span id="query-status" class="font-medium text-sm"></span>
+              </div>
+              <span id="query-count" class="text-xs text-gray-500 dark:text-gray-400"></span>
+            </div>
+            <!-- Chart -->
+            <div id="chart-container" class="mb-4 hidden">
+              <canvas id="query-chart" class="w-full h-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"></canvas>
+            </div>
+            <!-- Table -->
+            <div class="overflow-auto max-h-80 rounded-lg border border-gray-200 dark:border-gray-700">
+              <table class="w-full text-sm data-table">
+                <thead class="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Timestamp</th>
+                    <th class="px-4 py-2 text-left font-medium">Value</th>
+                  </tr>
+                </thead>
+                <tbody id="query-tbody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Performance Metrics -->
+    <section class="fade-in">
+      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        Performance Metrics
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-medium text-gray-700 dark:text-gray-200">Write Latency</h3>
+            <span id="perf-write-latest" class="text-2xl font-bold text-primary-600 dark:text-primary-400 font-mono">-</span>
+          </div>
+          <canvas id="perf-write-chart" class="w-full h-32"></canvas>
+          <div class="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <span>Min: <span id="perf-write-min" class="font-mono">-</span></span>
+            <span>Avg: <span id="perf-write-avg" class="font-mono">-</span></span>
+            <span>Max: <span id="perf-write-max" class="font-mono">-</span></span>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-medium text-gray-700 dark:text-gray-200">Query Latency</h3>
+            <span id="perf-query-latest" class="text-2xl font-bold text-primary-600 dark:text-primary-400 font-mono">-</span>
+          </div>
+          <canvas id="perf-query-chart" class="w-full h-32"></canvas>
+          <div class="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <span>Min: <span id="perf-query-min" class="font-mono">-</span></span>
+            <span>Avg: <span id="perf-query-avg" class="font-mono">-</span></span>
+            <span>Max: <span id="perf-query-max" class="font-mono">-</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+    <p>TSDB.zig Test Console &middot; Single-page HTML UI</p>
+  </footer>
+
+  <script>
+    // ===================== Theme =====================
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      html.classList.add('dark');
+    }
+    themeToggle.addEventListener('click', () => {
+      html.classList.toggle('dark');
+      localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+    });
+
+    // ===================== Utils =====================
+    function show(el) { el.classList.remove('hidden'); }
+    function hide(el) { el.classList.add('hidden'); }
+    function setText(el, text) { el.textContent = text; }
+    function formatTs(ns) {
+      const d = new Date(ns / 1e6);
+      return d.toISOString().replace('T', ' ').slice(0, 23);
+    }
+    function statusIcon(ok) {
+      return ok
+        ? '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+        : '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+    }
+
+    // ===================== Stats =====================
+    let statsTimer = null;
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        setText(document.getElementById('stat-hot'), data.hot_partitions ?? data.hot ?? '-');
+        setText(document.getElementById('stat-readonly'), data.readonly_partitions ?? data.readonly ?? '-');
+        setText(document.getElementById('stat-disk'), data.disk_partitions ?? data.disk ?? '-');
+        updateStatus(true);
+      } catch (e) {
+        updateStatus(false);
+      }
+    }
+    function updateStatus(online) {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (online) {
+        dot.classList.remove('bg-yellow-400', 'bg-red-400');
+        dot.classList.add('bg-emerald-400');
+        setText(text, 'Online');
+      } else {
+        dot.classList.remove('bg-yellow-400', 'bg-emerald-400');
+        dot.classList.add('bg-red-400');
+        setText(text, 'Offline');
+      }
+    }
+    function startStatsRefresh() {
+      fetchStats();
+      if (statsTimer) clearInterval(statsTimer);
+      statsTimer = setInterval(fetchStats, 3000);
+    }
+    function stopStatsRefresh() {
+      if (statsTimer) { clearInterval(statsTimer); statsTimer = null; }
+    }
+    document.getElementById('auto-refresh').addEventListener('change', (e) => {
+      e.target.checked ? startStatsRefresh() : stopStatsRefresh();
+    });
+    startStatsRefresh();
+
+    // ===================== Write =====================
+    function insertSampleWrite() {
+      const ts = Date.now() * 1e6;
+      document.getElementById('write-input').value = `cpu,host=server01,region=us-west usage=${(Math.random()*100).toFixed(2)},temperature=${(30+Math.random()*30).toFixed(2)} ${ts}`;
+    }
+    function clearWrite() {
+      document.getElementById('write-input').value = '';
+      hide(document.getElementById('write-result'));
+      hide(document.getElementById('write-latency'));
+    }
+    async function doWrite() {
+      const input = document.getElementById('write-input').value.trim();
+      if (!input) return alert('Please enter InfluxDB line protocol data');
+      const btn = document.getElementById('write-btn');
+      btn.disabled = true;
+      const start = performance.now();
+      try {
+        const res = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: input
+        });
+        const latency = Math.round(performance.now() - start);
+        const text = await res.text();
+        let json;
+        try { json = JSON.parse(text); } catch { json = null; }
+        const ok = res.ok;
+        const resultEl = document.getElementById('write-result');
+        show(resultEl);
+        document.getElementById('write-status-icon').innerHTML = statusIcon(ok);
+        document.getElementById('write-status').textContent = ok ? `Success (${res.status})` : `Error (${res.status})`;
+        document.getElementById('write-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        document.getElementById('write-output').textContent = json ? JSON.stringify(json, null, 2) : text;
+        document.getElementById('write-latency').querySelector('span').textContent = latency;
+        show(document.getElementById('write-latency'));
+        if (ok) pushPerf('write', latency);
+      } catch (e) {
+        const resultEl = document.getElementById('write-result');
+        show(resultEl);
+        document.getElementById('write-status-icon').innerHTML = statusIcon(false);
+        document.getElementById('write-status').textContent = 'Network Error';
+        document.getElementById('write-status').className = 'font-medium text-sm text-red-600 dark:text-red-400';
+        document.getElementById('write-output').textContent = e.message;
+        show(document.getElementById('write-latency'));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ===================== Query =====================
+    function fillNowRange() {
+      const now = Date.now() * 1e6;
+      const hourAgo = now - 3600e9;
+      document.getElementById('query-start').value = String(hourAgo);
+      document.getElementById('query-end').value = String(now);
+    }
+    async function doQuery() {
+      const series = document.getElementById('query-series').value.trim();
+      const start = document.getElementById('query-start').value.trim();
+      const end = document.getElementById('query-end').value.trim();
+      if (!series || !start || !end) return alert('Please fill all query fields');
+      const btn = document.getElementById('query-btn');
+      btn.disabled = true;
+      const startPerf = performance.now();
+      try {
+        const url = new URL('/api/query', window.location.origin);
+        url.searchParams.set('series_id', series);
+        url.searchParams.set('start', start);
+        url.searchParams.set('end', end);
+        const res = await fetch(url);
+        const latency = Math.round(performance.now() - startPerf);
+        const data = await res.json();
+        const ok = res.ok;
+        const resultEl = document.getElementById('query-result');
+        show(resultEl);
+        document.getElementById('query-status-icon').innerHTML = statusIcon(ok);
+        document.getElementById('query-status').textContent = ok ? `Success (${res.status})` : `Error (${res.status})`;
+        document.getElementById('query-status').className = 'font-medium text-sm ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
+        document.getElementById('query-latency').querySelector('span').textContent = latency;
+        show(document.getElementById('query-latency'));
+
+        const rows = Array.isArray(data) ? data : (data.results ?? data.points ?? []);
+        document.getElementById('query-count').textContent = `${rows.length} rows`;
+
+        const tbody = document.getElementById('query-tbody');
+        tbody.innerHTML = '';
+        rows.slice(0, 200).forEach(row => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+          const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? '-';
+          const val = row.value ?? row.val ?? row[1] ?? '-';
+          tr.innerHTML = `<td class="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">${typeof ts === 'number' ? formatTs(ts) : ts}</td><td class="px-4 py-2 font-mono text-xs">${val}</td>`;
+          tbody.appendChild(tr);
+        });
+        if (rows.length > 200) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td colspan="2" class="px-4 py-2 text-center text-xs text-gray-400 italic">... ${rows.length - 200} more rows ...</td>`;
+          tbody.appendChild(tr);
+        }
+
+        // Simple chart
+        drawQueryChart(rows);
+        if (ok) pushPerf('query', latency);
+      } catch (e) {
+        const resultEl = document.getElementById('query-result');
+        show(resultEl);
+        document.getElementById('query-status-icon').innerHTML = statusIcon(false);
+        document.getElementById('query-status').textContent = 'Network Error';
+        document.getElementById('query-status').className = 'font-medium text-sm text-red-600 dark:text-red-400';
+        document.getElementById('query-count').textContent = '';
+        document.getElementById('query-tbody').innerHTML = `<tr><td colspan="2" class="px-4 py-2 text-red-500">${e.message}</td></tr>`;
+        hide(document.getElementById('chart-container'));
+        show(document.getElementById('query-latency'));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function drawQueryChart(rows) {
+      const canvas = document.getElementById('query-chart');
+      const container = document.getElementById('chart-container');
+      const pts = rows.slice(0, 500).map(r => {
+        const ts = r.timestamp ?? r.ts ?? r.time ?? r[0] ?? 0;
+        const val = parseFloat(r.value ?? r.val ?? r[1] ?? 0);
+        return { ts: typeof ts === 'number' ? ts : 0, val: isNaN(val) ? 0 : val };
+      }).filter(p => p.ts > 0);
+      if (pts.length < 2) { hide(container); return; }
+      show(container);
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const w = rect.width, h = rect.height;
+      const pad = { top: 10, right: 10, bottom: 24, left: 44 };
+      const gw = w - pad.left - pad.right;
+      const gh = h - pad.top - pad.bottom;
+      const minTs = Math.min(...pts.map(p => p.ts));
+      const maxTs = Math.max(...pts.map(p => p.ts));
+      const minV = Math.min(...pts.map(p => p.val));
+      const maxV = Math.max(...pts.map(p => p.val));
+      const rangeV = maxV - minV || 1;
+      const isDark = html.classList.contains('dark');
+      ctx.clearRect(0, 0, w, h);
+
+      // Grid
+      ctx.strokeStyle = isDark ? '#334155' : '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (gh * i / 4);
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(w - pad.right, y);
+      }
+      ctx.stroke();
+
+      // Axes labels
+      ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (gh * i / 4);
+        const v = maxV - rangeV * (i / 4);
+        ctx.fillText(v.toFixed(2), pad.left - 6, y);
+      }
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const tsRange = maxTs - minTs || 1;
+      for (let i = 0; i <= 3; i++) {
+        const x = pad.left + (gw * i / 3);
+        const ts = minTs + tsRange * (i / 3);
+        ctx.fillText(formatTs(ts).slice(11, 19), x, h - pad.bottom + 4);
+      }
+
+      // Line
+      ctx.strokeStyle = isDark ? '#60a5fa' : '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      pts.forEach((p, i) => {
+        const x = pad.left + ((p.ts - minTs) / tsRange) * gw;
+        const y = pad.top + ((maxV - p.val) / rangeV) * gh;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Area fill
+      ctx.fillStyle = isDark ? 'rgba(96,165,250,0.15)' : 'rgba(37,99,235,0.1)';
+      ctx.beginPath();
+      pts.forEach((p, i) => {
+        const x = pad.left + ((p.ts - minTs) / tsRange) * gw;
+        const y = pad.top + ((maxV - p.val) / rangeV) * gh;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.lineTo(pad.left + gw, pad.top + gh);
+      ctx.lineTo(pad.left, pad.top + gh);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // ===================== Perf Charts =====================
+    const perfHistory = { write: [], query: [] };
+    const MAX_HISTORY = 30;
+    function pushPerf(type, ms) {
+      const arr = perfHistory[type];
+      arr.push(ms);
+      if (arr.length > MAX_HISTORY) arr.shift();
+      updatePerfPanel(type);
+    }
+    function updatePerfPanel(type) {
+      const arr = perfHistory[type];
+      if (!arr.length) return;
+      const latest = arr[arr.length - 1];
+      const min = Math.min(...arr);
+      const max = Math.max(...arr);
+      const avg = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+      setText(document.getElementById(`perf-${type}-latest`), latest + ' ms');
+      setText(document.getElementById(`perf-${type}-min`), min + ' ms');
+      setText(document.getElementById(`perf-${type}-avg`), avg + ' ms');
+      setText(document.getElementById(`perf-${type}-max`), max + ' ms');
+      drawPerfChart(type, arr);
+    }
+    function drawPerfChart(type, data) {
+      const canvas = document.getElementById(`perf-${type}-chart`);
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const w = rect.width, h = rect.height;
+      const isDark = html.classList.contains('dark');
+      ctx.clearRect(0, 0, w, h);
+      if (data.length < 2) return;
+      const maxV = Math.max(...data, 1);
+      const step = w / (MAX_HISTORY - 1);
+      const barW = Math.max(2, step * 0.7);
+
+      data.forEach((v, i) => {
+        const x = i * step + (step - barW) / 2;
+        const bh = (v / maxV) * (h - 4);
+        const y = h - bh - 2;
+        const hue = 210;
+        const sat = 80;
+        const lit = isDark ? 60 : 50;
+        ctx.fillStyle = `hsl(${hue}, ${sat}%, ${lit}%)`;
+        ctx.fillRect(x, y, barW, bh);
+      });
+    }
+    window.addEventListener('resize', () => {
+      if (perfHistory.write.length) drawPerfChart('write', perfHistory.write);
+      if (perfHistory.query.length) drawPerfChart('query', perfHistory.query);
+    });
+  </script>
+</body>
+</html>

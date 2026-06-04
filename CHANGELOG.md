@@ -13,15 +13,18 @@
 - 磁盘持久化：自定义二进制格式（Magic + Header + Series Blocks）。
 - 分区加载：`Engine.loadPartition` 支持从磁盘文件恢复只读分区。
 - Compaction 模块：合并多个分区、排序、按时间戳去重（保留最新值）。
-- HTTP API Server：提供 `/write`、`/query`、`stats` 端点。
-- CLI 工具：`serve`、`write`、`query`、`flush`、`compact` 命令。
+- **NNG 高性能 API Server**：基于 NNG req/rep 模式，提供 `write`、`query`、`stats` 命令。
+- **内嵌 Web 测试页面**：参考 llama-server 设计，启动服务后自动在 `port+1` 提供单页测试应用。
+- **POSIX socket 极简 HTTP 服务器**：`http_server.zig` 使用 C 标准库 socket 实现，Zig 0.16 兼容。
+- **GPU 加速抽象层** (`gpu_acceleration.zig`)：可插拔后端（CUDA / Metal / OpenCL / CPU SIMD fallback）。
+- CLI 工具：`serve`、`write`、`query`、`flush`、`compact`、`nngwrite`、`nngquery`、`nngstats` 命令。
 - 集成测试：覆盖写入 → 刷盘 → 加载 → 查询完整链路。
 - 性能基准测试：测量写入吞吐量、查询延迟、内存分区排序性能。
 - Zig 0.16.0 完整兼容层：
   - 自定义 `fs_helper.zig` 封装 POSIX `open/read/write/mkdir`。
   - 使用 `std.c.gettimeofday` 实现毫秒/纳秒时间戳。
   - 适配移除的 `std.heap.GeneralPurposeAllocator`、`std.process.argsAlloc`、`std.io.getStdOut` 等 API。
-- 32 个单元测试覆盖核心数据结构、引擎操作、Line Protocol 解析、二进制序列化等。
+- 47+ 个单元测试覆盖核心数据结构、引擎操作、Line Protocol 解析、二进制序列化、GPU 加速、HTTP 参数解析等。
 - **批量写入 API** (`Engine.writeBatch`)：同序列多点单次锁保护，显著提升写入吞吐。
 - **多场景基准测试**：单点写入、单序列批量、多序列批量（100 series x 1000 pts）。
 

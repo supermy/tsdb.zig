@@ -22,6 +22,13 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const http_server_mod = b.createModule(.{
+        .root_source_file = b.path("src/http_server.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    http_server_mod.addImport("tsdb", tsdb_mod);
+
     const server_mod = b.createModule(.{
         .root_source_file = b.path("src/server.zig"),
         .target = target,
@@ -29,6 +36,7 @@ pub fn build(b: *std.Build) void {
     });
     server_mod.addImport("tsdb", tsdb_mod);
     server_mod.addImport("nng", nng_mod);
+    server_mod.addImport("http_server", http_server_mod);
 
     const root_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
@@ -88,6 +96,7 @@ pub fn build(b: *std.Build) void {
     });
     server_test_mod.addImport("tsdb", tsdb_mod);
     server_test_mod.addImport("nng", nng_mod);
+    server_test_mod.addImport("http_server", http_server_mod);
     const t_server = b.addTest(.{ .root_module = server_test_mod });
     t_server.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/include" });
     t_server.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/lib" });
@@ -109,6 +118,15 @@ pub fn build(b: *std.Build) void {
     });
     const t_optimizer = b.addTest(.{ .root_module = optimizer_test_mod });
     test_step.dependOn(&b.addRunArtifact(t_optimizer).step);
+
+    // GPU 加速模块测试
+    const gpu_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/gpu_acceleration.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const t_gpu = b.addTest(.{ .root_module = gpu_test_mod });
+    test_step.dependOn(&b.addRunArtifact(t_gpu).step);
 
     // 集成测试
     const integration_mod = b.createModule(.{
