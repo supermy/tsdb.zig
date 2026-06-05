@@ -2,7 +2,7 @@
 
 所有重要变更均记录于此文件，格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
-## [Unreleased]
+## [0.2.0] - 2025-06-05
 
 ### Added
 - 实现完整时序数据库引擎核心（`Engine`、`MemoryPartition`、`SeriesData`）。
@@ -24,14 +24,24 @@
   - 自定义 `fs_helper.zig` 封装 POSIX `open/read/write/mkdir`。
   - 使用 `std.c.gettimeofday` 实现毫秒/纳秒时间戳。
   - 适配移除的 `std.heap.GeneralPurposeAllocator`、`std.process.argsAlloc`、`std.io.getStdOut` 等 API。
-- 47+ 个单元测试覆盖核心数据结构、引擎操作、Line Protocol 解析、二进制序列化、GPU 加速、HTTP 参数解析等。
+- 147 个测试覆盖核心数据结构、引擎操作、Line Protocol 解析、二进制序列化、GPU 加速、HTTP 参数解析等。
+- **接口测试**：5 个 HTTP API 测试覆盖 write / query / query_metric / flush / export 端点。
+- **端到端测试**：curl 命令行验证单条写入 → 查询 → 导出完整链路。
 - **批量写入 API** (`Engine.writeBatch`)：同序列多点单次锁保护，显著提升写入吞吐。
 - **多场景基准测试**：单点写入、单序列批量、多序列批量（100 series x 1000 pts）。
 - **增强版 Web 测试页面**：
   - 单条/批量写入测试、示例数据预设（CPU / 内存 / 温度）
   - 快速单点写入表单（Metric + Tags + Value + Timestamp）
   - 批量数据生成器（可配置序列数、点数、时间范围）与进度监控
-  - 数据导入（拖拽上传 txt/csv）与导出（JSON / CSV）
+  - 数据导入（拖拽上传 txt/csv）与导出（JSON / CSV / Line Protocol）
+  - 全部数据导出为 InfluxDB Line Protocol 格式
+  - 查询表格显示 Metric / Tags / Value 四列，无行数限制
+  - 浏览器 console.log 调试输出（8 个关键函数）
+- **HTTP API 增强**：
+  - `/api/query_metric` 端点：按指标名跨序列查询
+  - `/api/export` 端点：导出全部数据为 InfluxDB Line Protocol
+  - 查询响应包含 `metric`、`tags`、`series_id` 字段
+- **日志开关**：`tsdb serve [-v|--verbose]` 运行时日志级别控制（debug/warn）
 - **GitHub Actions CI/CD**：多平台自动构建（Linux x86_64 / macOS aarch64 / macOS x86_64）、测试、格式检查、Release 发布。
 
 ### Fixed
@@ -45,6 +55,11 @@
 - **Major: insert/getOrCreateSeriesData key 泄漏**：修复 `series_keys.put` 失败时 `cloneSeriesKey` 返回的 key 内存泄漏，添加 errdefer。
 - **MEDIUM: handleWrite 单行错误导致整批失败**：修复 HTTP `/write` 端点中单行解析错误导致整个请求返回 500 的问题，改为跳过错误行继续处理。
 - **MEDIUM: milliTimestamp assert**：修复 `gettimeofday` 失败时 `assert` 崩溃，改为返回 `error.TimeError`。
+- **写入 2000 查询返回 200**：修复 Web UI 表格 `rows.slice(0, 200)` 显示限制，移除后显示全部数据。
+- **CSV 导出 value 为空**：修复 API 响应格式，查询结果现在包含 `metric`、`tags`、`series_id` 字段；CSV 导出同步更新为 5 列格式。
+- **series_id JS 精度丢失**：HTTP 响应中 `series_id` 以字符串形式返回，避免 JavaScript Number 53 位精度限制。
+- **HTTP 大数据接收失败**：修复单 `recv` 调用无法接收超过 256KB 批量数据的问题，实现 Content-Length 解析循环 + 1MB 缓冲区。
+- **data 目录为空**：将 `max_partition_points` 从 10M 降至 100K，并添加自动落盘日志。
 - **内存安全**：修复 `MemoryPartition.deinit` 与 `loadPartition` 中的双重释放问题。
 - **所有权**：`cloneSeriesKey` 深拷贝确保分区对 `metric` 与 `tags` 字符串拥有独立所有权。
 - **模块冲突**：`main.zig` 从路径导入改为模块导入，避免 Zig 0.16 模块系统中文件重复归属错误。
@@ -54,6 +69,8 @@
 - `queryPartition` 返回类型从 `bool` 改为 `!void`，正确传播内存分配错误。
 - `milliTimestamp` 返回类型从 `i64` 改为 `!i64`，支持错误处理。
 - `fs_helper.toZ` 缓冲区大小从 1024 改为 1025，增加 `error.NameTooLong` 错误。
+- **API 响应格式变更**：查询接口 `/api/query` 和 `/api/query_metric` 现在返回增强格式，每个数据点包含 `metric`、`tags`、`series_id` 字段。
+- **磁盘分区加载策略**：从时间范围过滤改为保守加载策略（加载所有磁盘分区），避免历史数据写入导致的时间范围不匹配问题。
 - **性能优化**：
   - 增量热点计数器 (`hot_partition_points`) 替代每次 O(series_count) 遍历统计。
   - 已知序列跳过 `tag_index` 更新：避免重复字符串分配和 HashMap 操作。

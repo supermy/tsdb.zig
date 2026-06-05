@@ -165,3 +165,76 @@ pub const BinaryReader = struct {
         return self.data.len - self.pos;
     }
 };
+
+test "makePath creates nested directories" {
+    const dir = "tmp_fs_test_mkdir/a/b/c";
+    defer deleteTree("tmp_fs_test_mkdir") catch {};
+    try makePath(dir);
+    // Verify by creating a file inside
+    try writeFile("tmp_fs_test_mkdir/a/b/c/test.txt", "hello");
+    const data = try readFile("tmp_fs_test_mkdir/a/b/c/test.txt", std.testing.allocator);
+    defer std.testing.allocator.free(data);
+    try std.testing.expectEqualStrings("hello", data);
+}
+
+test "writeFile and readFile roundtrip" {
+    const path = "tmp_fs_test_rw.bin";
+    defer remove(path) catch {};
+    const data = "Hello, TSDB!";
+    try writeFile(path, data);
+    const read = try readFile(path, std.testing.allocator);
+    defer std.testing.allocator.free(read);
+    try std.testing.expectEqualStrings(data, read);
+}
+
+test "readFile not found returns error" {
+    try std.testing.expectError(error.FileNotFound, readFile("tmp_nonexistent_file_12345", std.testing.allocator));
+}
+
+test "deleteTree removes directory tree" {
+    try makePath("tmp_fs_test_del/sub");
+    try writeFile("tmp_fs_test_del/sub/file.txt", "data");
+    try deleteTree("tmp_fs_test_del");
+    try std.testing.expectError(error.FileNotFound, readFile("tmp_fs_test_del/sub/file.txt", std.testing.allocator));
+}
+
+test "BinaryWriter len returns correct length" {
+    var writer = BinaryWriter.init();
+    defer writer.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(usize, 0), writer.len());
+    try writer.writeAll(std.testing.allocator, "AB");
+    try std.testing.expectEqual(@as(usize, 2), writer.len());
+}
+
+test "BinaryReader remaining and readSlice" {
+    var writer = BinaryWriter.init();
+    defer writer.deinit(std.testing.allocator);
+    try writer.writeAll(std.testing.allocator, "ABCDE");
+    var reader = BinaryReader.init(writer.items());
+    try std.testing.expectEqual(@as(usize, 5), reader.remaining());
+    const slice = try reader.readSlice(3);
+    try std.testing.expectEqualStrings("ABC", slice);
+    try std.testing.expectEqual(@as(usize, 2), reader.remaining());
+}
+
+test "BinaryReader readAll EndOfStream" {
+    var reader = BinaryReader.init("AB");
+    var buf: [5]u8 = undefined;
+    try std.testing.expectError(error.EndOfStream, reader.readAll(&buf));
+}
+
+test "BinaryReader readInt EndOfStream" {
+    var reader = BinaryReader.init("AB");
+    try std.testing.expectError(error.EndOfStream, reader.readInt(u32, .little));
+}
+
+test "BinaryReader readSlice EndOfStream" {
+    var reader = BinaryReader.init("AB");
+    try std.testing.expectError(error.EndOfStream, reader.readSlice(5));
+}
+
+test "toZ with path too long returns error" {
+    var buf: [1025]u8 = undefined;
+    const long_path = "a" ** 1025;
+    try std.testing.expectError(error.NameTooLong, toZ(long_path, &buf));
+}

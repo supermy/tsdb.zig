@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TSDB.zig - Test Console</title>
+  <title data-i18n="title">TSDB.zig - Test Console</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -17,6 +17,176 @@
         }
       }
     }
+  </script>
+  <script>
+    // i18n system
+    const i18n = {
+      zh: {
+        title: 'TSDB.zig - 测试控制台',
+        subtitle: '测试控制台',
+        serverStatus: '服务状态',
+        checking: '检查中...',
+        online: '在线',
+        offline: '离线',
+        dataStorageStatus: '数据存储状态',
+        dataStorageDesc: '实时显示服务器分区状态与存储信息。',
+        flush: 'Flush 落盘',
+        refresh: '刷新',
+        autoRefresh: '自动刷新',
+        singleWrite: '单条数据写入',
+        singleWriteDesc: '支持 InfluxDB Line Protocol 格式。时间戳可选（省略时使用当前时间）。',
+        write: '写入',
+        exampleCPU: 'CPU 示例',
+        exampleMem: '内存示例',
+        exampleTemp: '温度示例',
+        quickWrite: '快速单点写入',
+        metric: '指标名',
+        tags: '标签',
+        value: '数值',
+        timestamp: '时间戳',
+        optional: '可选',
+        batchWrite: '批量数据写入',
+        batchWriteDesc: '生成模拟数据并批量写入。',
+        numSeries: '序列数量',
+        pointsPerSeries: '每序列点数',
+        timeRangeMs: '时间范围 (ms)',
+        generateAndWrite: '生成并写入',
+        importData: '数据导入',
+        importDesc: '拖拽上传 .txt / .csv / .lp 文件，解析并批量写入。',
+        dragDropHint: '拖拽文件到此处，或点击选择文件',
+        queryData: '数据查询',
+        queryDataDesc: '输入序列 ID（纯数字）或指标名（如 cpu）进行查询。',
+        query: '查询',
+        queryAllTime: '全部时间',
+        queryLastHour: '最近一小时',
+        loadSampleId: '加载示例 ID',
+        resolveSeriesId: '解析 Series ID',
+        queryResults: '查询结果',
+        field: '字段名',
+        exportJSON: 'JSON',
+        exportCSV: 'CSV',
+        exportLP: 'LP',
+        chartTitle: '数据趋势图',
+        noData: '查询数据条数 0，未找到匹配数据',
+        performance: '性能监控',
+        performanceDesc: '实时写入与查询延迟统计。',
+        writeLatency: '写入延迟',
+        queryLatency: '查询延迟',
+        exportSection: '数据导出',
+        exportQueryResults: '查询结果导出',
+        exportAllData: '全部数据导出',
+        exportAllDataDesc: '导出所有数据为 InfluxDB Line Protocol 格式',
+        exportLPBtn: 'Export LP',
+        batchTest: '批量数据测试',
+        batchTestDesc: '生成批量数据并进行查询测试。',
+        batchCreate: '批量创建',
+        batchQuery: '批量查询',
+        totalRecords: '总记录数',
+        language: '语言',
+        zh: '中文',
+        en: 'English',
+        readme: 'README',
+        readmeTitle: '快速上手',
+      },
+      en: {
+        title: 'TSDB.zig - Test Console',
+        subtitle: 'Test Console',
+        serverStatus: 'Server Status',
+        checking: 'Checking...',
+        online: 'Online',
+        offline: 'Offline',
+        dataStorageStatus: 'Data Storage Status',
+        dataStorageDesc: 'Real-time server partition status and storage info.',
+        flush: 'Flush to Disk',
+        refresh: 'Refresh',
+        autoRefresh: 'Auto Refresh',
+        singleWrite: 'Single Write',
+        singleWriteDesc: 'Supports InfluxDB Line Protocol format. Timestamp is optional.',
+        write: 'Write',
+        exampleCPU: 'CPU Example',
+        exampleMem: 'Memory Example',
+        exampleTemp: 'Temperature Example',
+        quickWrite: 'Quick Single Write',
+        metric: 'Metric',
+        tags: 'Tags',
+        value: 'Value',
+        timestamp: 'Timestamp',
+        optional: 'Optional',
+        batchWrite: 'Batch Write',
+        batchWriteDesc: 'Generate mock data and batch write.',
+        numSeries: 'Num Series',
+        pointsPerSeries: 'Points/Series',
+        timeRangeMs: 'Time Range (ms)',
+        generateAndWrite: 'Generate & Write',
+        importData: 'Data Import',
+        importDesc: 'Drag & drop .txt / .csv / .lp files to parse and batch write.',
+        dragDropHint: 'Drop files here or click to select',
+        queryData: 'Data Query',
+        queryDataDesc: 'Enter series ID (number) or metric name (e.g. cpu) to query.',
+        query: 'Query',
+        queryAllTime: 'All Time',
+        queryLastHour: 'Last Hour',
+        loadSampleId: 'Load Sample ID',
+        resolveSeriesId: 'Resolve Series ID',
+        queryResults: 'Query Results',
+        field: 'Field',
+        exportJSON: 'JSON',
+        exportCSV: 'CSV',
+        exportLP: 'LP',
+        chartTitle: 'Data Trend',
+        noData: 'No matching data found (0 records)',
+        performance: 'Performance',
+        performanceDesc: 'Real-time write and query latency statistics.',
+        writeLatency: 'Write Latency',
+        queryLatency: 'Query Latency',
+        exportSection: 'Data Export',
+        exportQueryResults: 'Export Query Results',
+        exportAllData: 'Export All Data',
+        exportAllDataDesc: 'Export all data as InfluxDB Line Protocol format',
+        exportLPBtn: 'Export LP',
+        batchTest: 'Batch Data Test',
+        batchTestDesc: 'Generate batch data and perform query tests.',
+        batchCreate: 'Batch Create',
+        batchQuery: 'Batch Query',
+        totalRecords: 'Total Records',
+        language: 'Language',
+        zh: '中文',
+        en: 'English',
+        readme: 'README',
+        readmeTitle: 'Quick Start',
+      }
+    };
+
+    let currentLang = 'zh';
+
+    function t(key) {
+      return i18n[currentLang][key] || key;
+    }
+
+    function applyI18n() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[currentLang][key]) {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = i18n[currentLang][key];
+          } else {
+            el.textContent = i18n[currentLang][key];
+          }
+        }
+      });
+      document.title = t('title');
+    }
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'zh' ? 'en' : 'zh';
+      localStorage.setItem('tsdb-lang', currentLang);
+      applyI18n();
+      document.getElementById('lang-btn').textContent = t('zh') + ' / ' + t('en');
+    }
+
+    // Load saved language
+    const savedLang = localStorage.getItem('tsdb-lang');
+    if (savedLang) currentLang = savedLang;
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -65,19 +235,28 @@
         <div class="sm:hidden text-primary-600 dark:text-primary-400 text-2xl">🦎</div>
         <div>
           <h1 class="text-xl font-bold tracking-tight">TSDB.zig</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">Test Console</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 -mt-0.5" data-i18n="subtitle">Test Console</p>
         </div>
       </div>
       <div class="flex items-center gap-4">
         <!-- Server Status -->
         <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800">
           <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse-dot"></span>
-          <span id="status-text" class="text-sm font-medium text-gray-600 dark:text-gray-300">Checking...</span>
+          <span id="status-text" class="text-sm font-medium text-gray-600 dark:text-gray-300" data-i18n="checking">Checking...</span>
         </div>
         <!-- Theme Toggle -->
         <button id="theme-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Toggle theme">
           <svg id="sun-icon" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
           <svg id="moon-icon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        </button>
+        <!-- Language Toggle -->
+        <button id="lang-btn" onclick="toggleLanguage()" class="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium">
+          中文 / English
+        </button>
+        <!-- README Toggle -->
+        <button onclick="toggleReadmeModal()" class="text-xs px-2 py-1 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors font-medium flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span data-i18n="readme">README</span>
         </button>
       </div>
     </div>
@@ -91,44 +270,52 @@
         <div>
           <h2 class="text-lg font-semibold flex items-center gap-2">
             <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-            Server Stats
+            <span data-i18n="dataStorageStatus">数据存储状态</span>
           </h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">实时显示服务器分区状态与存储信息。</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" data-i18n="dataStorageDesc">实时显示服务器分区状态与存储信息。</p>
         </div>
         <div class="flex items-center gap-3">
+          <button onclick="doFlush()" class="text-xs px-3 py-1.5 rounded-md bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors font-medium flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+            <span data-i18n="flush">Flush 落盘</span>
+          </button>
+          <button onclick="fetchStats()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <span data-i18n="refresh">刷新</span>
+          </button>
           <button onclick="exportStats()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            Export JSON
+            <span data-i18n="exportJSON">Export JSON</span>
           </button>
           <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
             <input id="auto-refresh" type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-            Auto-refresh
+            <span data-i18n="autoRefresh">自动刷新</span>
           </label>
         </div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Hot Partitions</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">热分区</p>
           <p id="stat-hot" class="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-1">-</p>
         </div>
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Readonly Partitions</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">只读分区</p>
           <p id="stat-readonly" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">-</p>
         </div>
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Disk Partitions</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">磁盘分区</p>
           <p id="stat-disk" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">-</p>
         </div>
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Total Partitions</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">总分区数</p>
           <p id="stat-total" class="text-3xl font-bold text-gray-700 dark:text-gray-200 mt-1">-</p>
         </div>
       </div>
       <!-- Storage State -->
       <div class="mt-4 bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-4 shadow-sm">
         <div class="flex items-center justify-between mb-2">
-          <span id="storage-state-text" class="text-sm text-gray-600 dark:text-gray-300 font-medium">Storage: -</span>
-          <span id="storage-state-badge" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">Idle</span>
+          <span id="storage-state-text" class="text-sm text-gray-600 dark:text-gray-300 font-medium">存储: -</span>
+          <span id="storage-state-badge" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">空闲</span>
         </div>
         <div class="w-full h-3 rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
           <div id="storage-bar-hot" class="bg-primary-500 h-full transition-all" style="width:0%"></div>
@@ -136,9 +323,9 @@
           <div id="storage-bar-disk" class="bg-emerald-500 h-full transition-all" style="width:0%"></div>
         </div>
         <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary-500"></span> Hot</div>
-          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Readonly</div>
-          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Disk</div>
+          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary-500"></span> 热分区</div>
+          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> 只读</div>
+          <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 磁盘</div>
         </div>
       </div>
     </section>
@@ -147,15 +334,15 @@
     <section class="fade-in">
       <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-        Write Test
+        <span data-i18n="singleWrite">Write Test</span>
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">写入单条或多条 InfluxDB Line Protocol 数据。点击预设按钮可快速插入示例数据。</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3" data-i18n="singleWriteDesc">写入单条或多条 InfluxDB Line Protocol 数据。点击预设按钮可快速插入示例数据。</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-gray-800/50 flex flex-wrap gap-2">
           <span class="text-xs font-medium text-gray-500 dark:text-gray-400 self-center mr-1">Presets:</span>
-          <button onclick="insertPreset('cpu')" class="text-xs px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium">CPU Sample</button>
-          <button onclick="insertPreset('memory')" class="text-xs px-3 py-1.5 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors font-medium">Memory Sample</button>
-          <button onclick="insertPreset('temperature')" class="text-xs px-3 py-1.5 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors font-medium">Temperature Sample</button>
+          <button onclick="insertPreset('cpu')" class="text-xs px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium" data-i18n="exampleCPU">CPU Sample</button>
+          <button onclick="insertPreset('memory')" class="text-xs px-3 py-1.5 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors font-medium" data-i18n="exampleMem">Memory Sample</button>
+          <button onclick="insertPreset('temperature')" class="text-xs px-3 py-1.5 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors font-medium" data-i18n="exampleTemp">Temperature Sample</button>
           <button onclick="insertPreset('multi')" class="text-xs px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors font-medium">Multi-series Batch</button>
           <div class="flex-1"></div>
           <button onclick="clearWrite()" class="text-xs px-3 py-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">Clear</button>
@@ -165,7 +352,7 @@
           <div class="mt-3 flex flex-wrap items-center gap-3">
             <button onclick="doWrite()" id="write-btn" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-              Write
+              <span data-i18n="write">Write</span>
             </button>
             <div id="write-latency" class="text-sm text-gray-500 dark:text-gray-400 hidden">
               Latency: <span class="font-mono font-medium text-gray-700 dark:text-gray-200">-</span> ms
@@ -177,15 +364,15 @@
         <div class="border-t border-gray-100 dark:border-dark-border p-4 bg-gray-50/30 dark:bg-gray-800/30">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
             <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-            Quick Write
+            <span data-i18n="quickWrite">Quick Write</span>
           </h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
-              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Metric</label>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" data-i18n="metric">Metric</label>
               <input id="qw-metric" type="text" value="cpu" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="cpu">
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tags (k=v,...)</label>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" data-i18n="tags">Tags (k=v,...)</label>
               <input id="qw-tags" type="text" value="host=server01,region=us-west" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="host=server01">
             </div>
             <div>
@@ -193,13 +380,13 @@
               <input id="qw-field" type="text" value="usage=75.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="usage=75.5">
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Timestamp (ns, optional)</label>
+              <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" data-i18n="timestamp">Timestamp (ns, optional)</label>
               <input id="qw-ts" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="auto">
             </div>
             <div class="flex items-end">
               <button onclick="doQuickWrite()" id="quick-write-btn" class="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Quick Write
+                <span data-i18n="quickWrite">Quick Write</span>
               </button>
             </div>
           </div>
@@ -227,25 +414,25 @@
     <section class="fade-in">
       <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-        Batch Write Test
+        <span data-i18n="batchWrite">Batch Write Test</span>
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">生成并批量写入模拟时序数据。可自定义序列数量与每序列点数，默认 1000 条。</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3" data-i18n="batchWriteDesc">生成并批量写入模拟时序数据。可自定义序列数量与每序列点数，默认 1000 条。</p>
       <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
         <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metric Name</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="metric">Metric Name</label>
             <input id="batch-metric" type="text" value="cpu" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series Count</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="numSeries">Series Count</label>
             <input id="batch-series" type="number" value="10" min="1" max="1000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Points / Series</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="pointsPerSeries">Points / Series</label>
             <input id="batch-points" type="number" value="200" min="1" max="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Range (hours)</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="timeRangeMs">Time Range (hours)</label>
             <input id="batch-hours" type="number" value="1" min="0.1" max="168" step="0.1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
           </div>
         </div>
@@ -256,7 +443,7 @@
           </button>
           <button onclick="doBatchWrite()" id="batch-write-btn" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            Write Batch
+            <span data-i18n="write">Write Batch</span>
           </button>
           <button onclick="clearBatch()" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Clear</button>
         </div>
@@ -293,13 +480,53 @@
       </div>
     </section>
 
+    <!-- Batch Data Test -->
+    <section class="fade-in">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <span data-i18n="batchTest">批量数据测试</span>
+          </h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" data-i18n="batchTestDesc">生成批量数据并进行查询测试。</p>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="numSeries">序列数量</label>
+            <input id="batch-test-series" type="number" value="10" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="pointsPerSeries">每序列点数</label>
+            <input id="batch-test-points" type="number" value="100" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="metric">指标名</label>
+            <input id="batch-test-metric" type="text" value="test_metric" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all" />
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="doBatchTestCreate()" class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            <span data-i18n="batchCreate">批量创建</span>
+          </button>
+          <button onclick="doBatchTestQuery()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <span data-i18n="batchQuery">批量查询</span>
+          </button>
+          <span id="batch-test-result" class="text-sm text-gray-600 dark:text-gray-400"></span>
+        </div>
+      </div>
+    </section>
+
     <!-- Query Test -->
     <section class="fade-in">
       <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        Query Test
+        <span data-i18n="queryData">Query Test</span>
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">按序列 ID 和时间范围查询数据。起始时间和结束时间留空则查询全部数据。</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3" data-i18n="queryDataDesc">按序列 ID 和时间范围查询数据。起始时间和结束时间留空则查询全部数据。</p>
       <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-3 text-xs text-yellow-800 dark:text-yellow-300">
         <strong>提示：</strong>Series ID 由 metric + 所有 tags 共同哈希决定。插入和查询时必须使用完全相同的 tags 组合，否则查询不到数据。建议写入后直接复制返回的 Series ID 进行查询。
       </div>
@@ -308,29 +535,29 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Series ID</label>
             <div class="flex gap-2">
-              <input id="query-series" type="text" class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="写入后复制 Series ID 填入此处，或输入 metric,tag=value 格式">
-              <button onclick="resolveSeriesId()" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">解析</button>
+              <input id="query-series" type="text" class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none" placeholder="输入 Series ID（数字）或指标名（如 cpu）查询">
+              <button onclick="resolveSeriesId()" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-i18n="resolveSeriesId">解析</button>
             </div>
             <div id="query-resolved" class="hidden mt-1 text-xs text-emerald-600 dark:text-emerald-400"></div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time (ns, optional)</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="timestamp">Start Time (ns, optional)</label>
             <input id="query-start" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="1620000000000000000">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time (ns, optional)</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="timestamp">End Time (ns, optional)</label>
             <input id="query-end" type="text" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-mono" placeholder="1620003600000000000">
           </div>
         </div>
         <div class="px-4 pb-4 flex flex-wrap items-center gap-3">
           <button onclick="doQuery()" id="query-btn" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            Query
+            <span data-i18n="query">Query</span>
           </button>
           <button onclick="fillNowRange()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Now - 1h</button>
-          <button onclick="queryAllTime()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Query All Time</button>
-          <button onclick="queryLastHour()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Query Last Hour</button>
-          <button onclick="loadSampleSeriesId()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm">Load Sample Series ID</button>
+          <button onclick="queryAllTime()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm" data-i18n="queryAllTime">Query All Time</button>
+          <button onclick="queryLastHour()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm" data-i18n="queryLastHour">Query Last Hour</button>
+          <button onclick="loadSampleSeriesId()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm" data-i18n="loadSampleId">Load Sample Series ID</button>
           <div id="query-latency" class="text-sm text-gray-500 dark:text-gray-400 hidden">
             Latency: <span class="font-mono font-medium text-gray-700 dark:text-gray-200">-</span> ms
           </div>
@@ -346,11 +573,15 @@
                 <span id="query-count" class="text-xs text-gray-500 dark:text-gray-400 mr-2"></span>
                 <button onclick="exportQueryResults('json')" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                  JSON
+                  <span data-i18n="exportJSON">JSON</span>
                 </button>
                 <button onclick="exportQueryResults('csv')" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                  CSV
+                  <span data-i18n="exportCSV">CSV</span>
+                </button>
+                <button onclick="exportQueryResults('lp')" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  <span data-i18n="exportLP">LP</span>
                 </button>
               </div>
             </div>
@@ -358,13 +589,26 @@
             <div id="chart-container" class="mb-4 hidden">
               <canvas id="query-chart" class="w-full h-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"></canvas>
             </div>
+            <!-- Total Records & Refresh -->
+            <div class="flex items-center justify-between mb-3 px-2">
+              <span class="text-sm text-gray-600 dark:text-gray-400">
+                <span data-i18n="totalRecords">总记录数</span>: <strong id="query-total-count" class="text-primary-600 dark:text-primary-400">0</strong>
+              </span>
+              <div class="flex items-center gap-2">
+                <button onclick="toggleQueryAutoRefresh()" id="query-auto-refresh-btn" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium" data-i18n="autoRefresh">自动刷新</button>
+                <button onclick="doQuery()" class="text-xs px-2 py-1 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors font-medium flex items-center gap-1" data-i18n="refresh">刷新</button>
+              </div>
+            </div>
             <!-- Table -->
             <div class="overflow-auto max-h-80 rounded-lg border border-gray-200 dark:border-gray-700">
               <table class="w-full text-sm data-table">
                 <thead class="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                   <tr>
-                    <th class="px-4 py-2 text-left font-medium">Timestamp</th>
-                    <th class="px-4 py-2 text-left font-medium">Value</th>
+                    <th class="px-4 py-2 text-left font-medium" data-i18n="timestamp">Timestamp</th>
+                    <th class="px-4 py-2 text-left font-medium" data-i18n="metric">Metric</th>
+                    <th class="px-4 py-2 text-left font-medium" data-i18n="field">Field</th>
+                    <th class="px-4 py-2 text-left font-medium" data-i18n="tags">Tags</th>
+                    <th class="px-4 py-2 text-left font-medium" data-i18n="value">Value</th>
                   </tr>
                 </thead>
                 <tbody id="query-tbody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
@@ -379,9 +623,9 @@
     <section class="fade-in">
       <h2 class="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-        Import / Export
+        <span data-i18n="importData">Import / Export</span>
       </h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">从文件导入 Line Protocol 数据，或导出查询结果到本地。</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3" data-i18n="importDesc">从文件导入 Line Protocol 数据，或导出查询结果到本地。</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Import -->
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5">
@@ -391,7 +635,7 @@
           </h3>
           <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center transition-colors cursor-pointer hover:border-primary-400 dark:hover:border-primary-500">
             <svg class="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Drag & drop a <strong>.txt</strong> or <strong>.csv</strong> file here</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400" data-i18n="dragDropHint">Drag & drop a <strong>.txt</strong> or <strong>.csv</strong> file here</p>
             <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">or click to browse</p>
             <input id="import-file" type="file" accept=".txt,.csv" class="hidden">
           </div>
@@ -411,17 +655,18 @@
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5">
           <h3 class="font-medium text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
             <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            Export Data
+            <span data-i18n="exportSection">Export Data</span>
           </h3>
           <div class="space-y-3">
             <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
               <div>
-                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Query Results</p>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="exportQueryResults">Query Results</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Export the last query results</p>
               </div>
               <div class="flex gap-2">
-                <button onclick="exportQueryResults('json')" class="text-xs px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium">JSON</button>
-                <button onclick="exportQueryResults('csv')" class="text-xs px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors font-medium">CSV</button>
+                <button onclick="exportQueryResults('json')" class="text-xs px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors font-medium" data-i18n="exportJSON">JSON</button>
+                <button onclick="exportQueryResults('csv')" class="text-xs px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors font-medium" data-i18n="exportCSV">CSV</button>
+                <button onclick="exportQueryResults('lp')" class="text-xs px-3 py-1.5 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors font-medium" data-i18n="exportLP">LP</button>
               </div>
             </div>
             <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
@@ -434,6 +679,13 @@
                 Export
               </button>
             </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+              <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="exportAllData">全部数据导出</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" data-i18n="exportAllDataDesc">导出所有数据为 InfluxDB Line Protocol 格式</p>
+              </div>
+              <button onclick="exportAllData()" class="text-xs px-3 py-1.5 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors font-medium" data-i18n="exportLPBtn">Export LP</button>
+            </div>
           </div>
         </div>
       </div>
@@ -443,12 +695,12 @@
     <section class="fade-in">
       <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
         <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-        Performance Metrics
+        <span data-i18n="performance">Performance Metrics</span>
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-medium text-gray-700 dark:text-gray-200">Write Latency</h3>
+            <h3 class="font-medium text-gray-700 dark:text-gray-200" data-i18n="writeLatency">Write Latency</h3>
             <span id="perf-write-latest" class="text-2xl font-bold text-primary-600 dark:text-primary-400 font-mono">-</span>
           </div>
           <canvas id="perf-write-chart" class="w-full h-32"></canvas>
@@ -460,7 +712,7 @@
         </div>
         <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-5 shadow-sm">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-medium text-gray-700 dark:text-gray-200">Query Latency</h3>
+            <h3 class="font-medium text-gray-700 dark:text-gray-200" data-i18n="queryLatency">Query Latency</h3>
             <span id="perf-query-latest" class="text-2xl font-bold text-primary-600 dark:text-primary-400 font-mono">-</span>
           </div>
           <canvas id="perf-query-chart" class="w-full h-32"></canvas>
@@ -479,6 +731,24 @@
     <p>TSDB.zig Test Console &middot; Single-page HTML UI</p>
   </footer>
 
+  <!-- README Modal -->
+  <div id="readme-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-dark-border">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span data-i18n="readmeTitle">快速上手</span>
+        </h3>
+        <button onclick="toggleReadmeModal()" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div id="readme-content" class="flex-1 overflow-auto px-5 py-4 text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-wrap leading-relaxed">
+        Loading...
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===================== Theme =====================
     const themeToggle = document.getElementById('theme-toggle');
@@ -495,8 +765,8 @@
     function show(el) { el.classList.remove('hidden'); }
     function hide(el) { el.classList.add('hidden'); }
     function setText(el, text) { el.textContent = text; }
-    function formatTs(ns) {
-      const d = new Date(ns / 1e6);
+    function formatTs(ms) {
+      const d = new Date(ms);
       return d.toISOString().replace('T', ' ').slice(0, 23);
     }
     function statusIcon(ok) {
@@ -521,29 +791,30 @@
     let lastStatsData = null;
     async function fetchStats() {
       try {
+        console.log('[STATS] Refreshing stats...');
         const res = await fetch('/api/stats', { mode: 'cors' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        console.log('[STATS] Stats:', data);
         lastStatsData = data;
-        const hot = data.hot_partitions ?? data.hot ?? 0;
-        const readonly = data.readonly_partitions ?? data.readonly ?? 0;
-        const disk = data.disk_partitions ?? data.disk ?? 0;
+        const readonly = data.readonly ?? 0;
+        const disk = data.disk ?? 0;
         const total = readonly + disk + 1;
-        setText(document.getElementById('stat-hot'), hot);
+        setText(document.getElementById('stat-hot'), '1');
         setText(document.getElementById('stat-readonly'), readonly);
         setText(document.getElementById('stat-disk'), disk);
         setText(document.getElementById('stat-total'), total);
 
         // Storage state text and badge
-        const stateText = `Storage: ${total} partitions, ${readonly} readonly, ${disk} on disk`;
+        const stateText = `存储: ${total} 分区, ${readonly} 只读, ${disk} 磁盘`;
         setText(document.getElementById('storage-state-text'), stateText);
         const badge = document.getElementById('storage-state-badge');
-        if (hot > 0) {
-          setText(badge, 'Active');
+        if (disk > 0) {
+          setText(badge, '已落盘');
           badge.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium';
         } else {
-          setText(badge, 'Idle');
-          badge.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium';
+          setText(badge, '内存中');
+          badge.className = 'text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium';
         }
 
         // Progress bar
@@ -566,20 +837,38 @@
       if (online) {
         dot.classList.remove('bg-yellow-400', 'bg-red-400');
         dot.classList.add('bg-emerald-400');
-        setText(text, 'Online');
+        setText(text, t('online'));
       } else {
         dot.classList.remove('bg-yellow-400', 'bg-emerald-400');
         dot.classList.add('bg-red-400');
-        setText(text, 'Offline');
+        setText(text, t('offline'));
       }
     }
     function startStatsRefresh() {
       fetchStats();
       if (statsTimer) clearInterval(statsTimer);
+      console.log('[AUTO-REFRESH] Started (5s interval)');
       statsTimer = setInterval(fetchStats, 3000);
     }
     function stopStatsRefresh() {
       if (statsTimer) { clearInterval(statsTimer); statsTimer = null; }
+    }
+    async function doFlush() {
+      if (!confirm('确定要将热分区数据刷写到磁盘吗？刷盘后内存中的数据将被清空。')) return;
+      console.log('[FLUSH] Flushing data...');
+      try {
+        const res = await fetch('/api/flush', { method: 'POST', mode: 'cors' });
+        const data = await res.json();
+        console.log('[FLUSH] Response:', data);
+        if (data && data.status === 'ok') {
+          alert('落盘成功');
+          fetchStats();
+        } else {
+          alert('落盘失败: ' + (data.msg || 'unknown'));
+        }
+      } catch (e) {
+        alert('落盘请求失败: ' + e.message);
+      }
     }
     document.getElementById('auto-refresh').addEventListener('change', (e) => {
       e.target.checked ? startStatsRefresh() : stopStatsRefresh();
@@ -714,6 +1003,7 @@
       line += ' ' + field;
       if (tsInput) line += ' ' + tsInput;
       else line += ' ' + (Date.now() * 1e6);
+      console.log('[SINGLE-WRITE] Sending:', line);
 
       const btn = document.getElementById('quick-write-btn');
       const result = document.getElementById('quick-write-result');
@@ -729,12 +1019,14 @@
         const text = await res.text();
         let data;
         try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[SINGLE-WRITE] Response:', data);
         const latency = Math.round(performance.now() - start);
         const ok = res.ok && data && data.status === 'ok';
         show(result);
         result.className = 'mt-2 text-xs ' + (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400');
         if (ok && data.series_id) {
-          result.innerHTML = `快速写入成功 (${res.status})，耗时 ${latency} ms。Series ID: <code class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">${data.series_id}</code> <button onclick="document.getElementById('query-series').value='${data.series_id}';document.getElementById('query-series').scrollIntoView({behavior:'smooth',block:'center'});" class="underline hover:no-underline">填入查询框</button>`;
+          const sidStr = String(data.series_id);
+          result.innerHTML = `快速写入成功 (${res.status})，耗时 ${latency} ms。Series ID: <code class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">${sidStr}</code> <button onclick="document.getElementById('query-series').value='${sidStr}';document.getElementById('query-series').scrollIntoView({behavior:'smooth',block:'center'});" class="underline hover:no-underline">填入查询框</button>`;
         } else {
           result.textContent = ok ? `快速写入成功 (${res.status})，耗时 ${latency} ms` : `快速写入失败 (${res.status})`;
         }
@@ -807,6 +1099,7 @@
       if (!lines.length) return alert('没有有效的数据行');
       batchLines = lines;
       batchAbort = false;
+      console.log('[BATCH-WRITE] Sending', lines.length, 'lines');
 
       const btn = document.getElementById('batch-write-btn');
       btn.disabled = true;
@@ -830,6 +1123,7 @@
         const text = await res.text();
         let data;
         try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[BATCH-WRITE] Response:', data);
         if (data && data.status === 'ok' && data.written) {
           written = data.written;
           if (data.series_id) seriesId = String(data.series_id);
@@ -867,8 +1161,82 @@
       }
     }
 
+    // ===================== Batch Data Test =====================
+    async function doBatchTestCreate() {
+      const numSeries = parseInt(document.getElementById('batch-test-series').value) || 10;
+      const pointsPerSeries = parseInt(document.getElementById('batch-test-points').value) || 100;
+      const metric = document.getElementById('batch-test-metric').value || 'test_metric';
+      const resultEl = document.getElementById('batch-test-result');
+      resultEl.textContent = 'Creating...';
+
+      let totalWritten = 0;
+      const baseTs = Date.now();
+
+      for (let s = 0; s < numSeries; s++) {
+        const lines = [];
+        for (let p = 0; p < pointsPerSeries; p++) {
+          const val = (Math.random() * 100).toFixed(2);
+          const ts = (baseTs + p * 1000) * 1e6;
+          lines.push(`${metric},host=host${s},idx=${p} value=${val} ${ts}`);
+        }
+        try {
+          const res = await fetch('/api/write', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            mode: 'cors',
+            body: lines.join('\n')
+          });
+          if (res.ok) totalWritten += lines.length;
+        } catch (e) {}
+      }
+      resultEl.textContent = `Created ${totalWritten} points in ${numSeries} series`;
+      console.log('[BATCH-TEST] Created', totalWritten, 'points');
+    }
+
+    async function doBatchTestQuery() {
+      const metric = document.getElementById('batch-test-metric').value || 'test_metric';
+      const resultEl = document.getElementById('batch-test-result');
+      resultEl.textContent = 'Querying...';
+
+      const start = performance.now();
+      try {
+        const url = new URL('/api/query_metric', window.location.origin);
+        url.searchParams.set('metric', metric);
+        url.searchParams.set('start', '0');
+        url.searchParams.set('end', String(Date.now() * 1e6));
+        const res = await fetch(url.toString(), { mode: 'cors' });
+        const data = await res.json();
+        const elapsed = (performance.now() - start).toFixed(1);
+        const count = data.points ? data.points.length : 0;
+        resultEl.textContent = `Queried ${count} records in ${elapsed}ms`;
+        console.log('[BATCH-TEST] Queried', count, 'records in', elapsed, 'ms');
+      } catch (e) {
+        resultEl.textContent = 'Query failed: ' + e.message;
+      }
+    }
+
     // ===================== Query =====================
     let lastQueryRows = [];
+    let queryAutoRefreshInterval = null;
+
+    function toggleQueryAutoRefresh() {
+      const btn = document.getElementById('query-auto-refresh-btn');
+      if (queryAutoRefreshInterval) {
+        clearInterval(queryAutoRefreshInterval);
+        queryAutoRefreshInterval = null;
+        btn.classList.remove('bg-green-100', 'text-green-700');
+        btn.classList.add('bg-gray-100');
+      } else {
+        queryAutoRefreshInterval = setInterval(() => {
+          if (document.getElementById('query-series').value.trim()) {
+            doQuery();
+          }
+        }, 5000);
+        btn.classList.remove('bg-gray-100');
+        btn.classList.add('bg-green-100', 'text-green-700');
+      }
+    }
+
     function fillNowRange() {
       const now = Date.now() * 1e6;
       const hourAgo = now - 3600e9;
@@ -940,37 +1308,26 @@
 
     async function doQuery() {
       let series = document.getElementById('query-series').value.trim();
-      if (!series) return alert('请输入序列 ID');
-      // 自动解析非数字输入
-      if (!/^\d+$/.test(series)) {
-        try {
-          const res = await fetch('/api/resolve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            mode: 'cors',
-            body: series + ' v=0'
-          });
-          const data = await res.json();
-          if (data && data.status === 'ok' && data.series_id) {
-            series = String(data.series_id);
-            document.getElementById('query-series').value = series;
-          } else {
-            return alert('无法解析 Series ID: ' + (data.msg || series));
-          }
-        } catch (e) {
-          return alert('解析 Series ID 失败: ' + e.message);
-        }
-      }
+      if (!series) return alert('请输入序列 ID 或指标名');
       let start = document.getElementById('query-start').value.trim();
       let end = document.getElementById('query-end').value.trim();
       if (!start) start = '0';
       if (!end) end = String(Date.now() * 1e6);
+      console.log('[QUERY] Querying:', series, 'range:', start, '-', end);
       const btn = document.getElementById('query-btn');
       btn.disabled = true;
       const startPerf = performance.now();
       try {
-        const url = new URL('/api/query', window.location.origin);
-        url.searchParams.set('series_id', series);
+        let url;
+        if (/^\d+$/.test(series)) {
+          // 纯数字：按 series_id 查询
+          url = new URL('/api/query', window.location.origin);
+          url.searchParams.set('series_id', series);
+        } else {
+          // 非数字：按 metric 名查询所有 series
+          url = new URL('/api/query_metric', window.location.origin);
+          url.searchParams.set('metric', series);
+        }
         url.searchParams.set('start', start);
         url.searchParams.set('end', end);
         const res = await fetch(url, { mode: 'cors' });
@@ -986,29 +1343,39 @@
         show(document.getElementById('query-latency'));
 
         const rows = Array.isArray(data) ? data : (data.results ?? data.points ?? []);
+        console.log('[QUERY] Response:', data, 'rows:', rows.length);
         lastQueryRows = rows;
         document.getElementById('query-count').textContent = `查询数据条数 ${rows.length}`;
+        document.getElementById('query-total-count').textContent = rows.length;
 
         const tbody = document.getElementById('query-tbody');
         tbody.innerHTML = '';
         if (rows.length === 0) {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td colspan="2" class="px-4 py-4 text-center text-sm text-gray-400">查询数据条数 0，未找到匹配数据</td>`;
+          tr.innerHTML = `<td colspan="4" class="px-4 py-4 text-center text-sm text-gray-400" data-i18n="noData">${t('noData')}</td>`;
           tbody.appendChild(tr);
         } else {
-          rows.slice(0, 200).forEach(row => {
+          rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
             const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? '-';
-            const val = row.value ?? row.val ?? row[1] ?? '-';
-            tr.innerHTML = `<td class="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">${typeof ts === 'number' ? formatTs(ts) : ts}</td><td class="px-4 py-2 font-mono text-xs">${val}</td>`;
+            const val = row.value ?? row.val ?? row.v ?? row[1] ?? '-';
+            const metric = row.metric ?? '-';
+            let tags = row.tags ?? '-';
+            // 从 tags 中提取 _f=fieldname 作为 field 列，并过滤掉 _f 标签
+            let field = 'value';
+            if (typeof tags === 'string' && tags !== '-') {
+              const fMatch = tags.match(/_f=([^,]+)/);
+              if (fMatch) {
+                field = fMatch[1];
+                tags = tags.replace(/,?_f=[^,]+/, '').replace(/^,/, '');
+                if (tags === '') tags = '-';
+              }
+            }
+            tr.innerHTML = `<td class="px-4 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">${typeof ts === 'number' ? formatTs(ts) : ts}</td><td class="px-4 py-2 font-mono text-xs text-primary-600 dark:text-primary-400">${metric}</td><td class="px-4 py-2 font-mono text-xs text-emerald-600 dark:text-emerald-400">${field}</td><td class="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400">${tags}</td><td class="px-4 py-2 font-mono text-xs">${val}</td>`;
             tbody.appendChild(tr);
           });
-          if (rows.length > 200) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="2" class="px-4 py-2 text-center text-xs text-gray-400 italic">... 还有 ${rows.length - 200} 条数据 ...</td>`;
-            tbody.appendChild(tr);
-          }
+
         }
 
         // Simple chart
@@ -1021,7 +1388,8 @@
         document.getElementById('query-status').textContent = '网络错误';
         document.getElementById('query-status').className = 'font-medium text-sm text-red-600 dark:text-red-400';
         document.getElementById('query-count').textContent = '查询数据条数 0';
-        document.getElementById('query-tbody').innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-red-500">请求失败：${e.message}</td></tr>`;
+        document.getElementById('query-total-count').textContent = '0';
+        document.getElementById('query-tbody').innerHTML = `<tr><td colspan="4" class="px-4 py-4 text-red-500">请求失败：${e.message}</td></tr>`;
         hide(document.getElementById('chart-container'));
         show(document.getElementById('query-latency'));
       } finally {
@@ -1034,7 +1402,7 @@
       const container = document.getElementById('chart-container');
       const pts = rows.slice(0, 500).map(r => {
         const ts = r.timestamp ?? r.ts ?? r.time ?? r[0] ?? 0;
-        const val = parseFloat(r.value ?? r.val ?? r[1] ?? 0);
+        const val = parseFloat(r.value ?? r.val ?? r.v ?? r[1] ?? 0);
         return { ts: typeof ts === 'number' ? ts : 0, val: isNaN(val) ? 0 : val };
       }).filter(p => p.ts > 0);
       if (pts.length < 2) { hide(container); return; }
@@ -1113,6 +1481,7 @@
     }
 
     function exportQueryResults(format) {
+      console.log('[EXPORT] Format:', format, 'rows:', lastQueryRows.length);
       if (!lastQueryRows || !lastQueryRows.length) {
         alert('No query results to export. Run a query first.');
         return;
@@ -1121,13 +1490,58 @@
       if (format === 'json') {
         downloadFile(JSON.stringify(lastQueryRows, null, 2), `query-results-${timestamp}.json`, 'application/json');
       } else if (format === 'csv') {
-        let csv = 'timestamp,value\n';
+        let csv = 'timestamp,metric,field,tags,series_id,value\n';
         lastQueryRows.forEach(row => {
           const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? '';
-          const val = row.value ?? row.val ?? row[1] ?? '';
-          csv += `${ts},${val}\n`;
+          const metric = row.metric ?? '';
+          let tags = row.tags ?? '';
+          let field = 'value';
+          if (typeof tags === 'string' && tags) {
+            const fMatch = tags.match(/_f=([^,]+)/);
+            if (fMatch) {
+              field = fMatch[1];
+              tags = tags.replace(/,?_f=[^,]+/, '').replace(/^,/, '');
+            }
+          }
+          const sid = row.series_id ?? '';
+          const val = row.value ?? row.val ?? row.v ?? row[1] ?? '';
+          const tsDisplay = typeof ts === 'number' ? formatTs(ts) : ts;
+          csv += `${tsDisplay},${metric},${field},"${tags}",${sid},${val}\n`;
         });
         downloadFile(csv, `query-results-${timestamp}.csv`, 'text/plain');
+      } else if (format === 'lp') {
+        let lp = '';
+        lastQueryRows.forEach(row => {
+          const ts = row.timestamp ?? row.ts ?? row.time ?? row[0] ?? 0;
+          const metric = row.metric ?? 'unknown';
+          let tags = row.tags ?? '';
+          let field = 'value';
+          if (typeof tags === 'string' && tags) {
+            const fMatch = tags.match(/_f=([^,]+)/);
+            if (fMatch) {
+              field = fMatch[1];
+              tags = tags.replace(/,?_f=[^,]+/, '').replace(/^,/, '');
+            }
+          }
+          const val = row.value ?? row.val ?? row.v ?? row[1] ?? 0;
+          const tsNs = typeof ts === 'number' ? ts * 1_000_000 : ts;
+          const tagPart = tags ? ',' + tags : '';
+          lp += `${metric}${tagPart} ${field}=${val} ${tsNs}\n`;
+        });
+        downloadFile(lp, `query-results-${timestamp}.lp`, 'text/plain');
+      }
+    }
+
+    async function exportAllData() {
+      console.log('[EXPORT-ALL] Exporting all data...');
+      try {
+        const res = await fetch('/api/export', { mode: 'cors' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const text = await res.text();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        downloadFile(text, `tsdb-export-${timestamp}.lp`, 'text/plain');
+      } catch (e) {
+        alert('导出失败: ' + e.message);
       }
     }
 
@@ -1249,6 +1663,44 @@
       if (perfHistory.write.length) drawPerfChart('write', perfHistory.write);
       if (perfHistory.query.length) drawPerfChart('query', perfHistory.query);
     });
+
+    // ===================== README Modal =====================
+    let readmeLoaded = false;
+    function toggleReadmeModal() {
+      const modal = document.getElementById('readme-modal');
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        if (!readmeLoaded) fetchReadme();
+      } else {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    }
+    // Close modal when clicking backdrop
+    document.getElementById('readme-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'readme-modal') toggleReadmeModal();
+    });
+    async function fetchReadme() {
+      const contentEl = document.getElementById('readme-content');
+      try {
+        const res = await fetch('/api/readme', { mode: 'cors' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data.status === 'ok' && data.content) {
+          contentEl.textContent = data.content;
+          readmeLoaded = true;
+        } else {
+          contentEl.textContent = 'Failed to load README: ' + (data.msg || 'unknown');
+        }
+      } catch (e) {
+        contentEl.textContent = 'Failed to load README: ' + e.message;
+      }
+    }
+
+    // Apply i18n on load
+    applyI18n();
+    document.getElementById('lang-btn').textContent = t('zh') + ' / ' + t('en');
   </script>
 </body>
 </html>

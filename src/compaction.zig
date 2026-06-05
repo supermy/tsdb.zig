@@ -142,3 +142,138 @@ test "Compactor merge and deduplicate" {
     try std.testing.expectEqual(@as(f64, 3.0), sd.values.items[1]);
     try std.testing.expectEqual(@as(i64, 30), sd.timestamps.items[2]);
 }
+
+test "Compactor merge empty partitions" {
+    const allocator = std.testing.allocator;
+    var compactor = Compactor.init(allocator);
+
+    var part_a = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_a.deinit();
+    var part_b = tsdb.MemoryPartition.init(allocator, 50, 150);
+    defer part_b.deinit();
+
+    var merged = try compactor.mergePartitions(&part_a, &part_b);
+    defer merged.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), merged.series_map.count());
+}
+
+test "Compactor merge non-overlapping series" {
+    const allocator = std.testing.allocator;
+    var compactor = Compactor.init(allocator);
+
+    var part_a = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_a.deinit();
+    var part_b = tsdb.MemoryPartition.init(allocator, 50, 150);
+    defer part_b.deinit();
+
+    const key_a = tsdb.SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "A" }},
+    };
+    const key_b = tsdb.SeriesKey{
+        .metric = "mem",
+        .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "B" }},
+    };
+
+    try part_a.insert(key_a.computeId(), key_a, 10, 1.0, 1024);
+    try part_b.insert(key_b.computeId(), key_b, 60, 2.0, 1024);
+
+    var merged = try compactor.mergePartitions(&part_a, &part_b);
+    defer merged.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), merged.series_map.count());
+}
+
+test "Compactor deduplicate single element" {
+    const allocator = std.testing.allocator;
+    var compactor = Compactor.init(allocator);
+
+    var part_a = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_a.deinit();
+    var part_b = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_b.deinit();
+
+    const key = tsdb.SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    try part_a.insert(key.computeId(), key, 10, 1.0, 1024);
+    try part_b.insert(key.computeId(), key, 10, 2.0, 1024);
+
+    var merged = try compactor.mergePartitions(&part_a, &part_b);
+    defer merged.deinit();
+
+    const sd = merged.series_map.get(key.computeId()).?;
+    try std.testing.expectEqual(@as(usize, 1), sd.len());
+    try std.testing.expectEqual(@as(f64, 2.0), sd.values.items[0]);
+}
+
+test "Compactor writePartitionToDisk and read back" {
+    const allocator = std.testing.allocator;
+    var compactor = Compactor.init(allocator);
+
+    var part = tsdb.MemoryPartition.init(allocator, 0, 1000);
+    defer part.deinit();
+
+    const key = tsdb.SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    try part.insert(key.computeId(), key, 100, 1.0, 1024);
+    try part.insert(key.computeId(), key, 200, 2.0, 1024);
+
+    const file_path = "tmp_compactor_write_test.tsdb";
+    defer tsdb.fs_helper.deleteTree(file_path) catch {};
+
+    try compactor.writePartitionToDisk(&part, file_path);
+
+    // Read back using Engine.loadPartition
+    var engine = try tsdb.Engine.init(allocator, "tmp_compactor_engine_test");
+    defer {
+        engine.deinit();
+        tsdb.fs_helper.deleteTree("tmp_compactor_engine_test") catch {};
+    }
+    try engine.loadPartition(file_path);
+
+    const points = try engine.queryRange(key.computeId(), 0, 1000, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 2), points.len);
+    try std.testing.expectEqual(@as(f64, 1.0), points[0].value);
+    try std.testing.expectEqual(@as(f64, 2.0), points[1].value);
+}
+
+test "Compactor merge with multiple duplicate timestamps" {
+    const allocator = std.testing.allocator;
+    var compactor = Compactor.init(allocator);
+
+    var part_a = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_a.deinit();
+    var part_b = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_b.deinit();
+    var part_c = tsdb.MemoryPartition.init(allocator, 0, 100);
+    defer part_c.deinit();
+
+    const key = tsdb.SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]tsdb.Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    try part_a.insert(key.computeId(), key, 10, 1.0, 1024);
+    try part_b.insert(key.computeId(), key, 10, 2.0, 1024);
+    try part_c.insert(key.computeId(), key, 10, 3.0, 1024);
+
+    // Merge a+b first
+    var merged_ab = try compactor.mergePartitions(&part_a, &part_b);
+    defer merged_ab.deinit();
+
+    // Then merge with c
+    var merged_abc = try compactor.mergePartitions(&merged_ab, &part_c);
+    defer merged_abc.deinit();
+
+    const sd = merged_abc.series_map.get(key.computeId()).?;
+    try std.testing.expectEqual(@as(usize, 1), sd.len());
+    try std.testing.expectEqual(@as(f64, 3.0), sd.values.items[0]);
+}

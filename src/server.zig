@@ -110,15 +110,19 @@ pub const Server = struct {
             }
             const sid = p.key.computeId();
             try self.engine.write(p.key, p.point);
-            return try std.fmt.bufPrint(resp_buf, "{{\"status\":\"ok\",\"written\":1,\"series_id\":{d}}}", .{sid});
+            return try std.fmt.bufPrint(resp_buf, "{{\"status\":\"ok\",\"written\":1,\"series_id\":\"{d}\"}}", .{sid});
         }
         return try std.fmt.bufPrint(resp_buf, "{{\"status\":\"error\",\"msg\":\"parse failed\"}}", .{});
     }
 
     fn handleQueryCmd(self: *Server, request: []const u8, resp_buf: []u8) ![]const u8 {
         const sid = parseJsonFieldU64(request, "series_id") orelse 0;
-        const q_start = parseJsonFieldI64(request, "start") orelse 0;
-        const q_end = parseJsonFieldI64(request, "end") orelse std.math.maxInt(i64);
+        const raw_start = parseJsonFieldI64(request, "start") orelse 0;
+        const raw_end = parseJsonFieldI64(request, "end") orelse std.math.maxInt(i64);
+
+        // 若传入纳秒时间戳（>1e15）则转换为毫秒
+        const q_start = if (raw_start > 1_000_000_000_000_000) @divFloor(raw_start, 1_000_000) else raw_start;
+        const q_end = if (raw_end > 1_000_000_000_000_000) @divFloor(raw_end, 1_000_000) else raw_end;
 
         const points = try self.engine.queryRange(sid, q_start, q_end, self.allocator);
         defer self.allocator.free(points);
@@ -197,4 +201,36 @@ test "parseJsonField" {
     const json = "{\"cmd\":\"write\",\"data\":\"cpu,host=A usage=45i\"}";
     try std.testing.expectEqualStrings("write", parseJsonField(json, "cmd").?);
     try std.testing.expectEqualStrings("cpu,host=A usage=45i", parseJsonField(json, "data").?);
+}
+
+test "parseJsonFieldU64" {
+    const json = "{\"cmd\":\"query\",\"series_id\":12345,\"start\":0,\"end\":9999}";
+    try std.testing.expectEqual(@as(?u64, 12345), parseJsonFieldU64(json, "series_id"));
+    try std.testing.expectEqual(@as(?u64, null), parseJsonFieldU64(json, "nonexistent"));
+}
+
+test "parseJsonFieldI64" {
+    const json = "{\"cmd\":\"query\",\"series_id\":1,\"start\":-100,\"end\":9999}";
+    try std.testing.expectEqual(@as(?i64, -100), parseJsonFieldI64(json, "start"));
+    try std.testing.expectEqual(@as(?i64, 9999), parseJsonFieldI64(json, "end"));
+    try std.testing.expectEqual(@as(?i64, null), parseJsonFieldI64(json, "nonexistent"));
+}
+
+test "parseJsonFieldU64 with string value" {
+    // series_id may be returned as string "12345"
+    const json = "{\"series_id\":\"12345\"}";
+    try std.testing.expectEqual(@as(?u64, 12345), parseJsonFieldU64(json, "series_id"));
+}
+
+test "parseJsonField missing field returns null" {
+    const json = "{\"cmd\":\"stats\"}";
+    try std.testing.expectEqual(@as(?[]const u8, null), parseJsonField(json, "data"));
+}
+
+test "parseJsonFieldU64 empty json returns null" {
+    try std.testing.expectEqual(@as(?u64, null), parseJsonFieldU64("{}", "series_id"));
+}
+
+test "parseJsonFieldI64 empty json returns null" {
+    try std.testing.expectEqual(@as(?i64, null), parseJsonFieldI64("{}", "start"));
 }

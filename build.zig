@@ -103,6 +103,23 @@ pub fn build(b: *std.Build) void {
     t_server.root_module.linkSystemLibrary("nng", .{});
     test_step.dependOn(&b.addRunArtifact(t_server).step);
 
+    const fs_helper_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/fs_helper.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const t_fs_helper = b.addTest(.{ .root_module = fs_helper_test_mod });
+    test_step.dependOn(&b.addRunArtifact(t_fs_helper).step);
+
+    const http_server_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/http_server.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    http_server_test_mod.addImport("tsdb", tsdb_mod);
+    const t_http_server = b.addTest(.{ .root_module = http_server_test_mod });
+    test_step.dependOn(&b.addRunArtifact(t_http_server).step);
+
     const arrow_test_mod = b.createModule(.{
         .root_source_file = b.path("src/ffi/arrow.zig"),
         .target = target,
@@ -136,6 +153,7 @@ pub fn build(b: *std.Build) void {
     });
     integration_mod.addImport("tsdb", tsdb_mod);
     integration_mod.addImport("compaction", compaction_mod);
+    integration_mod.addImport("http_server", http_server_mod);
 
     const integration_test = b.addTest(.{
         .root_module = integration_mod,

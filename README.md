@@ -41,6 +41,44 @@
 - **Header**: 起始时间、结束时间、序列数量、总点数
 - **Series Blocks**: 每个序列包含 metric、tags、timestamps[]、values[]
 
+## 接口测试命令
+
+以下命令使用 `curl` 对 HTTP API 进行端到端测试，无需浏览器：
+
+```bash
+# 1. 启动服务（带详细日志）
+./tsdb serve 8080 -v
+
+# 2. 单条写入
+curl -s -X POST http://localhost:8081/api/write \
+  -d 'cpu,host=server01,region=us-west usage=42.5 1609459200000000000'
+# 响应：{"status":"ok","written":1,"series_id":"1273906692725521564"}
+
+# 3. 按 series_id 查询
+curl -s "http://localhost:8081/api/query?series_id=1273906692725521564&start=0&end=9999999999999999999"
+# 响应：{"status":"ok","points":[{"ts":1609459200000,"v":42.500000,"metric":"cpu","tags":"host=server01,region=us-west","series_id":"1273906692725521564"}]}
+
+# 4. 按 metric 名查询（跨所有序列）
+curl -s "http://localhost:8081/api/query_metric?metric=cpu&start=0&end=9999999999999999999"
+
+# 5. 手动落盘
+curl -s -X POST http://localhost:8081/api/flush
+# 响应：{"status":"ok","msg":"flushed"}
+
+# 6. 导出全部数据（InfluxDB Line Protocol 格式）
+curl -s "http://localhost:8081/api/export"
+# 响应：cpu,host=server01,region=us-west value=42.5 1609459200000000000
+
+# 7. 批量写入（多行 Line Protocol）
+curl -s -X POST http://localhost:8081/api/write \
+  --data-binary @data.txt \
+  -H "Content-Type: text/plain"
+
+# 8. 获取服务统计
+curl -s "http://localhost:8081/api/stats"
+# 响应：{"status":"ok","hot_partition_series":1,"hot_partition_points":1,"readonly_partitions":0,"disk_partitions":1}
+```
+
 ## 快速开始
 
 ### 环境要求
@@ -104,6 +142,10 @@ Memory Partition Sort:
 # 启动 NNG 服务（默认端口 8080，HTTP 测试页面在 8081）
 ./tsdb serve 8080
 
+# 启用详细日志（显示每次写入、查询、落盘信息）
+./tsdb serve 8080 -v
+./tsdb serve --verbose
+```
 # 通过 NNG 写入单条数据（时间戳可选，省略时使用当前时间）
 ./tsdb nngwrite "tcp://127.0.0.1:8080" "cpu,host=server01 value=42.0"
 
@@ -156,16 +198,34 @@ echo '{"cmd":"stats"}' | nng req tcp://127.0.0.1:8080
 
 - `GET /` 或 `GET /index.html` → 内嵌测试页面（单页应用）
 - `POST /api/write` → 写入数据（body 为 line protocol）
-- `GET /api/query?series_id=...&start=...&end=...` → 查询数据
+- `GET /api/query?series_id=...&start=...&end=...` → 按序列 ID 查询
+- `GET /api/query_metric?metric=...&start=...&end=...` → 按指标名查询（跨所有序列）
+- `GET /api/export` → 导出全部数据（InfluxDB Line Protocol 格式）
 - `GET /api/stats` → 服务器统计
+
+**查询响应格式**（包含 metric、tags、series_id）：
+```json
+{
+  "status": "ok",
+  "points": [
+    {
+      "ts": 1609459200000,
+      "v": 42.500000,
+      "metric": "cpu",
+      "tags": "host=server01,region=us-west",
+      "series_id": "1273906692725521564"
+    }
+  ]
+}
+```
 
 Web UI 功能：
 - **单条写入测试**：支持手动输入 Line Protocol，或点击预设示例（CPU / 内存 / 温度）
 - **快速单点写入**：通过 Metric、Tags、Value、Timestamp 表单快速构建并发送
 - **批量写入测试**：生成模拟数据（指定序列数、每序列点数、时间范围），逐行批量写入，实时显示进度与吞吐
 - **数据导入**：支持拖拽上传 `.txt` / `.csv` 文件，解析并批量写入
-- **数据导出**：查询结果可导出为 JSON 或 CSV；统计面板可导出为 JSON
-- **查询可视化**：Canvas 折线图 + 数据表格，支持暗色/亮色模式
+- **数据导出**：查询结果可导出为 JSON / CSV / InfluxDB Line Protocol；支持全部数据导出为 `.lp` 文件
+- **查询可视化**：Canvas 折线图 + 数据表格（显示 Timestamp / Metric / Tags / Value），支持暗色/亮色模式
 - **性能监控**：实时写入/查询延迟柱状图与 Min/Avg/Max 统计
 
 ## GPU 加速
@@ -221,12 +281,20 @@ TSDB.zig 提供可插拔的 GPU 加速抽象层，支持以下后端：
 
 ## 核心数据类型
 
-### DataPoint
+### DataPoint / DataPointEx
 
 ```zig
 const DataPoint = struct {
     timestamp: i64, // 毫秒时间戳
     value: f64,
+};
+
+const DataPointEx = struct {
+    timestamp: i64,
+    value: f64,
+    series_id: u64,
+    metric: []const u8,
+    tags: []const Tag,
 };
 ```
 
@@ -255,9 +323,17 @@ var points = try allocator.alloc(tsdb.DataPoint, 1000);
 // ... fill points ...
 try engine.writeBatch(key, points);
 
-// 查询
+// 查询（基础版：仅返回 ts + value）
 const points = try engine.queryRange(sid, start, end, allocator);
 defer allocator.free(points);
+
+// 增强查询（返回带 metric/tags/series_id 的数据）
+const pointsEx = try engine.queryRangeEx(sid, start, end, allocator);
+defer allocator.free(pointsEx);
+
+// 按指标名查询（跨所有序列）
+const metricPoints = try engine.queryByMetricEx("cpu", start, end, allocator);
+defer allocator.free(metricPoints);
 ```
 
 ## 技术细节

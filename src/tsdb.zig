@@ -32,6 +32,15 @@ pub const DataPoint = struct {
     value: f64,
 };
 
+/// 带序列信息的数据点（用于 API 返回）
+pub const DataPointEx = struct {
+    timestamp: i64,
+    value: f64,
+    series_id: u64,
+    metric: []const u8,
+    tags: []const Tag,
+};
+
 /// 标签键值对，用于标识序列
 pub const Tag = struct {
     key: []const u8,
@@ -61,14 +70,7 @@ pub const SeriesKey = struct {
         return hasher.final();
     }
 
-    pub fn format(
-        self: SeriesKey,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        _ = fmt;
-        _ = options;
+    pub fn format(self: SeriesKey, writer: *std.Io.Writer) std.Io.Writer.Error!void {
         try writer.print("{s}", .{self.metric});
         for (self.tags) |tag| {
             try writer.print(",{s}={s}", .{ tag.key, tag.value });
@@ -304,7 +306,7 @@ pub const Engine = struct {
             .tag_index = std.StringHashMap(std.AutoHashMap(u64, void)).init(allocator),
             .lock = .{},
             .data_dir = try allocator.dupe(u8, data_dir),
-            .max_partition_points = 10_000_000, // 1000万点
+            .max_partition_points = 100_000, // 10万点自动落盘
             .hot_partition_points = 0,
             .series_prealloc = 1024,
         };
@@ -404,6 +406,8 @@ pub const Engine = struct {
 
         // 检查是否需要刷盘（增量计数，O(1)）
         if (self.hot_partition_points >= self.max_partition_points) {
+            const log = std.log.scoped(.tsdb);
+            log.info("hot partition reached {d} points, auto-flushing", .{self.hot_partition_points});
             try self.flushHotPartition();
         }
     }
@@ -416,6 +420,14 @@ pub const Engine = struct {
     pub fn flushHotPartition(self: *Engine) !void {
         // 空分区不刷盘
         if (self.hot_partition.series_map.count() == 0) return;
+
+        const log = std.log.scoped(.tsdb);
+        log.info("flushing hot partition: {d} series, {d} points, range [{d}, {d}]", .{
+            self.hot_partition.series_map.count(),
+            self.hot_partition_points,
+            self.hot_partition.start_time,
+            self.hot_partition.end_time,
+        });
 
         self.hot_partition.sortAll();
 
@@ -486,6 +498,8 @@ pub const Engine = struct {
         self.hot_partition.deinit();
         self.hot_partition.* = MemoryPartition.init(self.allocator, next_start, next_end);
         self.hot_partition_points = 0;
+
+        log.info("flushed to {s}: {d} series, {d} points", .{ filename, series_count, total_points });
     }
 
     /// 加载磁盘分区到只读内存（mmap 风格的简化：全量加载）
@@ -558,6 +572,80 @@ pub const Engine = struct {
         try self.readonly_partitions.append(self.allocator, partition);
     }
 
+    /// 按指标名查询所有序列在时间范围内的数据点
+    pub fn queryByMetric(self: *Engine, metric: []const u8, start: i64, end: i64, allocator: std.mem.Allocator) ![]DataPoint {
+        var result = std.ArrayList(DataPoint).empty;
+        errdefer result.deinit(allocator);
+
+        self.lock.lock();
+        defer self.lock.unlock();
+
+        // 收集所有分区中匹配 metric 的 series_id
+        var series_ids = std.AutoHashMap(u64, void).init(allocator);
+        defer series_ids.deinit();
+
+        // 从热分区收集
+        var kit = self.hot_partition.series_keys.iterator();
+        while (kit.next()) |entry| {
+            if (std.mem.eql(u8, entry.value_ptr.metric, metric)) {
+                try series_ids.put(entry.key_ptr.*, {});
+            }
+        }
+
+        // 从只读分区收集
+        for (self.readonly_partitions.items) |partition| {
+            kit = partition.series_keys.iterator();
+            while (kit.next()) |entry| {
+                if (std.mem.eql(u8, entry.value_ptr.metric, metric)) {
+                    try series_ids.put(entry.key_ptr.*, {});
+                }
+            }
+        }
+
+        // 从磁盘分区收集（加载到内存）
+        var i: usize = 0;
+        while (i < self.disk_partitions.items.len) {
+            const meta = self.disk_partitions.items[i];
+            self.loadPartition(meta.file_path) catch {
+                i += 1;
+                continue;
+            };
+            self.allocator.free(meta.file_path);
+            _ = self.disk_partitions.orderedRemove(i);
+
+            const loaded = self.readonly_partitions.items[self.readonly_partitions.items.len - 1];
+            kit = loaded.series_keys.iterator();
+            while (kit.next()) |entry| {
+                if (std.mem.eql(u8, entry.value_ptr.metric, metric)) {
+                    try series_ids.put(entry.key_ptr.*, {});
+                }
+            }
+        }
+
+        // 对每个 series_id 执行查询，按 (series_id, timestamp) 去重
+        var seen = std.AutoHashMap(u128, void).init(allocator);
+        defer seen.deinit();
+
+        var sit = series_ids.keyIterator();
+        while (sit.next()) |sid| {
+            var temp = std.ArrayList(DataPoint).empty;
+            defer temp.deinit(allocator);
+            try self.queryPartition(self.hot_partition, sid.*, start, end, &temp, allocator);
+            for (self.readonly_partitions.items) |partition| {
+                try self.queryPartition(partition, sid.*, start, end, &temp, allocator);
+            }
+            for (temp.items) |p| {
+                const key = (@as(u128, @intCast(sid.*)) << 64) | @as(u64, @intCast(p.timestamp));
+                if (!seen.contains(key)) {
+                    try seen.put(key, {});
+                    try result.append(allocator, p);
+                }
+            }
+        }
+
+        return result.toOwnedSlice(allocator);
+    }
+
     /// 查询某序列在时间范围内的数据点
     pub fn queryRange(self: *Engine, series_id: u64, start: i64, end: i64, allocator: std.mem.Allocator) ![]DataPoint {
         var result = std.ArrayList(DataPoint).empty;
@@ -574,7 +662,24 @@ pub const Engine = struct {
             try self.queryPartition(partition, series_id, start, end, &result, allocator);
         }
 
-        // TODO: 查询磁盘分区（按需加载）
+        // 查询磁盘分区（按需加载到只读内存）
+        // 注意：热分区可能包含不属于当前时间范围的数据（历史数据写入），
+        // 所以磁盘分区也可能包含时间范围外的数据，需要全部检查
+        var i: usize = 0;
+        while (i < self.disk_partitions.items.len) {
+            const meta = self.disk_partitions.items[i];
+            // 宽松匹配：由于热分区可能包含任意时间的数据，保守地加载所有磁盘分区
+            self.loadPartition(meta.file_path) catch {
+                i += 1;
+                continue;
+            };
+            self.allocator.free(meta.file_path);
+            _ = self.disk_partitions.orderedRemove(i);
+
+            // 查询刚加载的只读分区（最后一个）
+            const loaded = self.readonly_partitions.items[self.readonly_partitions.items.len - 1];
+            try self.queryPartition(loaded, series_id, start, end, &result, allocator);
+        }
 
         return result.toOwnedSlice(allocator);
     }
@@ -615,6 +720,111 @@ pub const Engine = struct {
             sum += p.value;
         }
         return sum / @as(f64, @floatFromInt(points.len));
+    }
+
+    /// 获取序列键（用于 API 返回 metric/tags 信息）
+    pub fn getSeriesKey(self: *Engine, series_id: u64) ?SeriesKey {
+        self.lock.lock();
+        defer self.lock.unlock();
+        if (self.hot_partition.series_keys.get(series_id)) |key| return key;
+        for (self.readonly_partitions.items) |p| {
+            if (p.series_keys.get(series_id)) |key| return key;
+        }
+        return null;
+    }
+
+    /// 查询并返回带序列信息的数据点
+    pub fn queryRangeEx(self: *Engine, series_id: u64, start: i64, end: i64, allocator: std.mem.Allocator) ![]DataPointEx {
+        const points = try self.queryRange(series_id, start, end, allocator);
+        errdefer allocator.free(points);
+
+        const key = self.getSeriesKey(series_id);
+        const result = try allocator.alloc(DataPointEx, points.len);
+        errdefer allocator.free(result);
+
+        for (points, 0..) |p, i| {
+            result[i] = .{
+                .timestamp = p.timestamp,
+                .value = p.value,
+                .series_id = series_id,
+                .metric = if (key) |k| k.metric else "",
+                .tags = if (key) |k| k.tags else &[_]Tag{},
+            };
+        }
+        allocator.free(points);
+        return result;
+    }
+
+    /// 按指标名查询并返回带序列信息的数据点
+    /// 直接遍历匹配 metric 的所有 series，确保每个 DataPointEx 都有正确的 series_id 和 tags
+    pub fn queryByMetricEx(self: *Engine, metric: []const u8, start: i64, end: i64, allocator: std.mem.Allocator) ![]DataPointEx {
+        var result = std.ArrayList(DataPointEx).empty;
+        errdefer result.deinit(allocator);
+
+        self.lock.lock();
+        defer self.lock.unlock();
+
+        // 收集所有分区中匹配 metric 的 series
+        var series_list = std.ArrayList(struct { sid: u64, key: *SeriesKey, partition: *MemoryPartition }).empty;
+        defer series_list.deinit(allocator);
+
+        var kit = self.hot_partition.series_keys.iterator();
+        while (kit.next()) |entry| {
+            if (std.mem.eql(u8, entry.value_ptr.metric, metric)) {
+                try series_list.append(allocator, .{ .sid = entry.key_ptr.*, .key = entry.value_ptr, .partition = self.hot_partition });
+            }
+        }
+        for (self.readonly_partitions.items) |partition| {
+            kit = partition.series_keys.iterator();
+            while (kit.next()) |entry| {
+                if (std.mem.eql(u8, entry.value_ptr.metric, metric)) {
+                    try series_list.append(allocator, .{ .sid = entry.key_ptr.*, .key = entry.value_ptr, .partition = partition });
+                }
+            }
+        }
+
+        // 加载磁盘分区并收集
+        var i: usize = 0;
+        while (i < self.disk_partitions.items.len) {
+            const meta = self.disk_partitions.items[i];
+            self.loadPartition(meta.file_path) catch {
+                i += 1;
+                continue;
+            };
+            self.allocator.free(meta.file_path);
+            _ = self.disk_partitions.orderedRemove(i);
+            const loaded = self.readonly_partitions.items[self.readonly_partitions.items.len - 1];
+            kit = loaded.series_keys.iterator();
+            while (kit.next()) |entry| {
+                if (std.mem.eql(u8, entry.value_ptr.metric, metric)) {
+                    try series_list.append(allocator, .{ .sid = entry.key_ptr.*, .key = entry.value_ptr, .partition = loaded });
+                }
+            }
+        }
+
+        // 对每个 series 查询数据并构建 DataPointEx（按 sid+ts 去重）
+        var seen = std.AutoHashMap(u128, void).init(allocator);
+        defer seen.deinit();
+
+        for (series_list.items) |s| {
+            const sd = s.partition.series_map.getPtr(s.sid) orelse continue;
+            for (0..sd.len()) |j| {
+                const ts = sd.timestamps.items[j];
+                if (ts < start or ts > end) continue;
+                const key = (@as(u128, @intCast(s.sid)) << 64) | @as(u64, @intCast(ts));
+                if (seen.contains(key)) continue;
+                try seen.put(key, {});
+                try result.append(allocator, .{
+                    .timestamp = ts,
+                    .value = sd.values.items[j],
+                    .series_id = s.sid,
+                    .metric = s.key.metric,
+                    .tags = s.key.tags,
+                });
+            }
+        }
+
+        return result.toOwnedSlice(allocator);
     }
 
     /// 解析 InfluxDB Line Protocol 单条写入
@@ -1381,4 +1591,697 @@ test "milliTimestamp returns valid time" {
     const ts = try milliTimestamp();
     try std.testing.expect(ts > 1_000_000_000_000); // 应大于 2001 年的时间戳
     try std.testing.expect(ts < 10_000_000_000_000); // 应小于 2286 年的时间戳
+}
+
+test "Engine queryRange loads disk partition on demand" {
+    // 验证 queryRange 在数据 flush 到磁盘后仍能查到（自动加载磁盘分区）
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_query_disk");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_query_disk") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    // 固定热分区时间范围，使 flush 后的分区文件时间与查询范围对齐
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+    try engine.write(key, .{ .timestamp = 200, .value = 2.0 });
+    try engine.flushHotPartition();
+
+    // 此时数据应在磁盘，热分区已清空
+    try std.testing.expectEqual(@as(usize, 0), engine.hot_partition.series_map.count());
+    try std.testing.expectEqual(@as(usize, 1), engine.disk_partitions.items.len);
+
+    // queryRange 应该自动加载磁盘分区并返回数据
+    const points = try engine.queryRange(sid, 0, 300, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 2), points.len);
+    try std.testing.expectEqual(@as(f64, 1.0), points[0].value);
+    try std.testing.expectEqual(@as(f64, 2.0), points[1].value);
+}
+
+test "queryByMetric returns data from all matching series" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_query_by_metric");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_query_by_metric") catch {};
+    }
+
+    const key1 = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const key2 = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "B" }},
+    };
+    const key3 = SeriesKey{
+        .metric = "mem",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key1, .{ .timestamp = 100, .value = 1.0 });
+    try engine.write(key2, .{ .timestamp = 200, .value = 2.0 });
+    try engine.write(key3, .{ .timestamp = 300, .value = 3.0 });
+
+    // 按 cpu 查询应返回 2 条（key1 + key2）
+    const cpu_points = try engine.queryByMetric("cpu", 0, 3600_000, allocator);
+    defer allocator.free(cpu_points);
+    try std.testing.expectEqual(@as(usize, 2), cpu_points.len);
+
+    // 按 mem 查询应返回 1 条
+    const mem_points = try engine.queryByMetric("mem", 0, 3600_000, allocator);
+    defer allocator.free(mem_points);
+    try std.testing.expectEqual(@as(usize, 1), mem_points.len);
+    try std.testing.expectEqual(@as(f64, 3.0), mem_points[0].value);
+
+    // 按不存在的 metric 查询应返回 0 条
+    const disk_points = try engine.queryByMetric("disk", 0, 3600_000, allocator);
+    defer allocator.free(disk_points);
+    try std.testing.expectEqual(@as(usize, 0), disk_points.len);
+}
+
+test "queryByMetric after flush loads from disk" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_query_metric_disk");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_query_metric_disk") catch {};
+    }
+
+    const key1 = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const key2 = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "B" }},
+    };
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key1, .{ .timestamp = 100, .value = 1.0 });
+    try engine.write(key2, .{ .timestamp = 200, .value = 2.0 });
+    try engine.flushHotPartition();
+
+    // 数据已在磁盘
+    try std.testing.expectEqual(@as(usize, 1), engine.disk_partitions.items.len);
+
+    const points = try engine.queryByMetric("cpu", 0, 3600_000, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 2), points.len);
+}
+
+test "write with nanosecond timestamp converts to milliseconds" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_ns_ts");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_ns_ts") catch {};
+    }
+
+    const line = "cpu,host=A value=42 1609459200000000000";
+    const result = try engine.parseLineProtocol(line);
+    try std.testing.expect(result != null);
+    if (result) |p| {
+        defer {
+            allocator.free(p.key.metric);
+            for (p.key.tags) |tag| {
+                allocator.free(tag.key);
+                allocator.free(tag.value);
+            }
+            allocator.free(p.key.tags);
+        }
+        // 1609459200000000000 ns = 1609459200000 ms
+        try std.testing.expectEqual(@as(i64, 1609459200000), p.point.timestamp);
+        try std.testing.expectEqual(@as(f64, 42.0), p.point.value);
+    }
+}
+
+test "write without timestamp uses current time" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_no_ts");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_no_ts") catch {};
+    }
+
+    const before = try milliTimestamp();
+    const line = "cpu,host=A value=42";
+    const result = try engine.parseLineProtocol(line);
+    const after = try milliTimestamp();
+    try std.testing.expect(result != null);
+    if (result) |p| {
+        defer {
+            allocator.free(p.key.metric);
+            for (p.key.tags) |tag| {
+                allocator.free(tag.key);
+                allocator.free(tag.value);
+            }
+            allocator.free(p.key.tags);
+        }
+        try std.testing.expect(p.point.timestamp >= before);
+        try std.testing.expect(p.point.timestamp <= after);
+    }
+}
+
+test "parseLineProtocol integer field value" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_int_field");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_int_field") catch {};
+    }
+
+    const line = "cpu,host=A count=100i 1609459200000000000";
+    const result = try engine.parseLineProtocol(line);
+    try std.testing.expect(result != null);
+    if (result) |p| {
+        defer {
+            allocator.free(p.key.metric);
+            for (p.key.tags) |tag| {
+                allocator.free(tag.key);
+                allocator.free(tag.value);
+            }
+            allocator.free(p.key.tags);
+        }
+        try std.testing.expectEqual(@as(f64, 100.0), p.point.value);
+    }
+}
+
+test "auto-flush triggers at max_partition_points" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_auto_flush");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_auto_flush") catch {};
+    }
+    engine.max_partition_points = 10; // 降低阈值方便测试
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    var i: usize = 0;
+    while (i < 15) : (i += 1) {
+        try engine.write(key, .{ .timestamp = @intCast(i), .value = @floatFromInt(i) });
+    }
+
+    // 写入 15 条，阈值 10，应该已自动落盘
+    try std.testing.expect(engine.disk_partitions.items.len > 0);
+
+    // 查询应返回全部 15 条
+    const sid = key.computeId();
+    const points = try engine.queryRange(sid, 0, 3600_000, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 15), points.len);
+}
+
+test "queryRange with nanosecond-scale start/end handled correctly" {
+    // 模拟前端传入纳秒时间戳的场景
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_ns_query");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_ns_query") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    try engine.write(key, .{ .timestamp = 1780565510673, .value = 47.5 });
+
+    const sid = key.computeId();
+    // start=0, end 用一个大的纳秒值（转换后应大于数据时间戳）
+    const points = try engine.queryRange(sid, 0, 9999999999999, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 1), points.len);
+    try std.testing.expectEqual(@as(f64, 47.5), points[0].value);
+}
+
+// ==================== 第三轮新增测试 ====================
+
+test "Engine.writeBatch writes multiple points" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_write_batch");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_write_batch") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    const points = [_]DataPoint{
+        .{ .timestamp = 100, .value = 1.0 },
+        .{ .timestamp = 200, .value = 2.0 },
+        .{ .timestamp = 300, .value = 3.0 },
+    };
+    try engine.writeBatch(key, &points);
+
+    const result = try engine.queryRange(sid, 0, 400, allocator);
+    defer allocator.free(result);
+    try std.testing.expectEqual(@as(usize, 3), result.len);
+    try std.testing.expectEqual(@as(f64, 1.0), result[0].value);
+    try std.testing.expectEqual(@as(f64, 2.0), result[1].value);
+    try std.testing.expectEqual(@as(f64, 3.0), result[2].value);
+}
+
+test "Engine.writeBatch with empty points slice" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_write_batch_empty");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_write_batch_empty") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    const points = [_]DataPoint{};
+    try engine.writeBatch(key, &points);
+
+    // Should not crash, no data added
+    try std.testing.expectEqual(@as(usize, 0), engine.hot_partition.series_map.count());
+}
+
+test "write with future timestamp rotates partition" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_future_rotate");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_future_rotate") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    // Write a point in the current range
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+
+    // Write a point far in the future - triggers rotateHotPartition
+    try engine.write(key, .{ .timestamp = 9999999999999, .value = 2.0 });
+
+    // Old data should be flushed to disk, new data in hot partition
+    // Query should find both points
+    const result = try engine.queryRange(sid, 0, 9999999999999 + 3600_000, allocator);
+    defer allocator.free(result);
+    try std.testing.expectEqual(@as(usize, 2), result.len);
+}
+
+test "queryRange with readonly partitions" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_readonly_query");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_readonly_query") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+    try engine.write(key, .{ .timestamp = 200, .value = 2.0 });
+    try engine.flushHotPartition();
+
+    // Load the flushed partition as readonly
+    try std.testing.expectEqual(@as(usize, 1), engine.disk_partitions.items.len);
+    try engine.loadPartition(engine.disk_partitions.items[0].file_path);
+
+    // Remove the disk entry to avoid double-loading during query
+    allocator.free(engine.disk_partitions.items[0].file_path);
+    _ = engine.disk_partitions.orderedRemove(0);
+
+    // Hot partition should be empty now
+    try std.testing.expectEqual(@as(usize, 0), engine.hot_partition.series_map.count());
+
+    // Readonly partition should have the data
+    try std.testing.expectEqual(@as(usize, 1), engine.readonly_partitions.items.len);
+
+    // Query should find data in readonly partition
+    const points = try engine.queryRange(sid, 0, 300, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 2), points.len);
+}
+
+test "queryByMetric with readonly partitions" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_readonly_metric");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_readonly_metric") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+    try engine.write(key, .{ .timestamp = 200, .value = 2.0 });
+    try engine.flushHotPartition();
+
+    // Load the flushed partition as readonly
+    try std.testing.expectEqual(@as(usize, 1), engine.disk_partitions.items.len);
+    try engine.loadPartition(engine.disk_partitions.items[0].file_path);
+
+    // Remove the disk entry to avoid double-loading during query
+    allocator.free(engine.disk_partitions.items[0].file_path);
+    _ = engine.disk_partitions.orderedRemove(0);
+
+    // Query by metric should find data in readonly partition
+    const points = try engine.queryByMetric("cpu", 0, 300, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 2), points.len);
+}
+
+test "queryRange with start > end returns empty" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_start_gt_end");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_start_gt_end") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+
+    const points = try engine.queryRange(sid, 500, 100, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 0), points.len);
+}
+
+test "queryByMetric with start > end returns empty" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_metric_start_gt_end");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_metric_start_gt_end") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+
+    const points = try engine.queryByMetric("cpu", 500, 100, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 0), points.len);
+}
+
+test "loadPartition with invalid magic returns error" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_invalid_magic");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_invalid_magic") catch {};
+    }
+
+    const test_file = "tmp_test_invalid_magic/bad_magic.tsdb";
+    try fs.makePath("tmp_test_invalid_magic");
+    try fs.writeFile(test_file, "XDBA");
+
+    try std.testing.expectError(error.InvalidMagic, engine.loadPartition(test_file));
+}
+
+test "loadPartition with unsupported version returns error" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_bad_version");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_bad_version") catch {};
+    }
+
+    var writer = fs.BinaryWriter.init();
+    defer writer.deinit(allocator);
+    try writer.writeAll(allocator, "TSDB");
+    try writer.writeInt(u32, 999, .little, allocator);
+
+    const test_file = "tmp_test_bad_version/bad_ver.tsdb";
+    try fs.makePath("tmp_test_bad_version");
+    try fs.writeFile(test_file, writer.items());
+
+    try std.testing.expectError(error.UnsupportedVersion, engine.loadPartition(test_file));
+}
+
+test "loadPartition with truncated data returns error" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_truncated");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_truncated") catch {};
+    }
+
+    const test_file = "tmp_test_truncated/trunc.tsdb";
+    try fs.makePath("tmp_test_truncated");
+    try fs.writeFile(test_file, "TSDB");
+
+    try std.testing.expectError(error.EndOfStream, engine.loadPartition(test_file));
+}
+
+test "parseLineProtocol with invalid field value returns error" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_lp_bad_value");
+    defer engine.deinit();
+    defer fs.deleteTree("tmp_test_lp_bad_value") catch {};
+
+    // "abc" cannot be parsed as a number
+    try std.testing.expectError(error.InvalidCharacter, engine.parseLineProtocol("cpu,host=A value=abc"));
+}
+
+test "parseLineProtocol with tag missing equals sign is skipped" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_lp_no_eq");
+    defer engine.deinit();
+    defer fs.deleteTree("tmp_test_lp_no_eq") catch {};
+
+    const line = "cpu,invalidtag value=42i 1609459200000000000";
+    const result = try engine.parseLineProtocol(line);
+    try std.testing.expect(result != null);
+    defer {
+        allocator.free(result.?.key.metric);
+        for (result.?.key.tags) |tag| {
+            allocator.free(tag.key);
+            allocator.free(tag.value);
+        }
+        allocator.free(result.?.key.tags);
+    }
+    // Tag without "=" should be skipped, so 0 tags
+    try std.testing.expectEqual(@as(usize, 0), result.?.key.tags.len);
+    try std.testing.expectEqualStrings("cpu", result.?.key.metric);
+    try std.testing.expectEqual(@as(f64, 42.0), result.?.point.value);
+}
+
+test "Tag.eql returns correct comparison" {
+    const tag_a = Tag{ .key = "host", .value = "A" };
+    const tag_a2 = Tag{ .key = "host", .value = "A" };
+    const tag_b = Tag{ .key = "host", .value = "B" };
+    const tag_c = Tag{ .key = "dc", .value = "A" };
+
+    try std.testing.expect(tag_a.eql(tag_a2));
+    try std.testing.expect(!tag_a.eql(tag_b));
+    try std.testing.expect(!tag_a.eql(tag_c));
+}
+
+test "SeriesKey.format outputs correct string" {
+    const allocator = std.testing.allocator;
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{
+            .{ .key = "host", .value = "A" },
+            .{ .key = "dc", .value = "east" },
+        },
+    };
+    const result = try std.fmt.allocPrint(allocator, "{f}", .{key});
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("cpu,host=A,dc=east", result);
+}
+
+test "SeriesData.appendSlice adds multiple points" {
+    const allocator = std.testing.allocator;
+    var sd = SeriesData.init();
+    defer sd.deinit(allocator);
+
+    const timestamps = [_]i64{ 100, 200, 300 };
+    const values = [_]f64{ 1.0, 2.0, 3.0 };
+    try sd.appendSlice(allocator, &timestamps, &values);
+
+    try std.testing.expectEqual(@as(usize, 3), sd.len());
+    try std.testing.expectEqual(@as(i64, 100), sd.timestamps.items[0]);
+    try std.testing.expectEqual(@as(i64, 200), sd.timestamps.items[1]);
+    try std.testing.expectEqual(@as(i64, 300), sd.timestamps.items[2]);
+    try std.testing.expectEqual(@as(f64, 1.0), sd.values.items[0]);
+    try std.testing.expectEqual(@as(f64, 2.0), sd.values.items[1]);
+    try std.testing.expectEqual(@as(f64, 3.0), sd.values.items[2]);
+}
+
+test "Mutex lock and unlock works" {
+    var mu = Mutex{};
+    mu.lock();
+    mu.unlock();
+    // Should not deadlock in single thread
+    mu.lock();
+    mu.unlock();
+}
+
+test "Engine.write with timestamp 0" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_ts_zero");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_ts_zero") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 0, .value = 42.0 });
+
+    const points = try engine.queryRange(sid, 0, 1, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 1), points.len);
+    try std.testing.expectEqual(@as(i64, 0), points[0].timestamp);
+    try std.testing.expectEqual(@as(f64, 42.0), points[0].value);
+}
+
+test "Engine.write with negative timestamp" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_ts_neg");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_ts_neg") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{.{ .key = "host", .value = "A" }},
+    };
+    const sid = key.computeId();
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = -1000, .value = 7.5 });
+
+    const points = try engine.queryRange(sid, -2000, 1000, allocator);
+    defer allocator.free(points);
+    try std.testing.expectEqual(@as(usize, 1), points.len);
+    try std.testing.expectEqual(@as(i64, -1000), points[0].timestamp);
+    try std.testing.expectEqual(@as(f64, 7.5), points[0].value);
+}
+
+test "Engine.write same series twice does not duplicate tag_index" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_tag_dedup");
+    defer {
+        engine.deinit();
+        fs.deleteTree("tmp_test_tag_dedup") catch {};
+    }
+
+    const key = SeriesKey{
+        .metric = "cpu",
+        .tags = &[_]Tag{
+            .{ .key = "host", .value = "A" },
+            .{ .key = "dc", .value = "east" },
+        },
+    };
+
+    engine.hot_partition.start_time = 0;
+    engine.hot_partition.end_time = 3600_000;
+
+    try engine.write(key, .{ .timestamp = 100, .value = 1.0 });
+    try engine.write(key, .{ .timestamp = 200, .value = 2.0 });
+
+    // tag_index should have exactly one entry for each tag key=value
+    try std.testing.expect(engine.tag_index.contains("host=A"));
+    try std.testing.expect(engine.tag_index.contains("dc=east"));
+
+    // Each tag_index entry should map to exactly 1 series_id
+    const host_entry = engine.tag_index.get("host=A").?;
+    try std.testing.expectEqual(@as(usize, 1), host_entry.count());
+
+    const dc_entry = engine.tag_index.get("dc=east").?;
+    try std.testing.expectEqual(@as(usize, 1), dc_entry.count());
+}
+
+test "parseLineProtocol with multiple fields only uses first" {
+    const allocator = std.testing.allocator;
+    var engine = try Engine.init(allocator, "tmp_test_lp_multi_field");
+    defer engine.deinit();
+    defer fs.deleteTree("tmp_test_lp_multi_field") catch {};
+
+    const line = "cpu,host=A value1=10i,value2=20i 1609459200000000000";
+    const result = try engine.parseLineProtocol(line);
+    try std.testing.expect(result != null);
+    defer {
+        allocator.free(result.?.key.metric);
+        for (result.?.key.tags) |tag| {
+            allocator.free(tag.key);
+            allocator.free(tag.value);
+        }
+        allocator.free(result.?.key.tags);
+    }
+    // Only the first field value should be parsed
+    try std.testing.expectEqual(@as(f64, 10.0), result.?.point.value);
 }

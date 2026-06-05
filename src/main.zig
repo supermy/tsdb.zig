@@ -3,6 +3,23 @@ const tsdb = @import("tsdb");
 const server = @import("server");
 const compaction = @import("compaction");
 
+var current_log_level: std.log.Level = .warn;
+
+pub const std_options: std.Options = .{
+    .log_level = .debug,
+    .logFn = customLogFn,
+};
+
+fn customLogFn(
+    comptime message_level: std.log.Level,
+    comptime scope: @EnumLiteral(),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    if (@intFromEnum(message_level) > @intFromEnum(current_log_level)) return;
+    std.log.defaultLog(message_level, scope, format, args);
+}
+
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;
     const io = init.io;
@@ -18,8 +35,19 @@ pub fn main(init: std.process.Init) !void {
     const log = std.log.scoped(.main);
 
     if (std.mem.eql(u8, command, "serve")) {
-        const port = if (arg_iter.next()) |p| try std.fmt.parseInt(u16, p, 10) else 8080;
-        try cmdServe(allocator, port);
+        var verbose = false;
+        var port: u16 = 8080;
+        while (arg_iter.next()) |arg| {
+            if (std.mem.eql(u8, arg, "--verbose") or std.mem.eql(u8, arg, "-v")) {
+                verbose = true;
+            } else {
+                port = std.fmt.parseInt(u16, arg, 10) catch {
+                    log.err("Invalid port: {s}", .{arg});
+                    return error.InvalidArgument;
+                };
+            }
+        }
+        try cmdServe(allocator, port, verbose);
     } else if (std.mem.eql(u8, command, "write")) {
         const line = arg_iter.next() orelse {
             log.err("Usage: tsdb write <line_protocol>", .{});
@@ -94,7 +122,7 @@ fn printUsage(io: std.Io) !void {
         \\tsdb.zig - Time Series Database Engine
         \\
         \\Usage:
-        \\  tsdb serve [port]              Start NNG server (default 8080)
+        \\  tsdb serve [port] [-v|--verbose]  Start NNG server (default 8080)
         \\  tsdb write <line>              Write a line protocol point
         \\  tsdb query <sid> <s> <e>       Query range for series
         \\  tsdb nngwrite <addr> <line>    Write via NNG req/rep
@@ -107,7 +135,13 @@ fn printUsage(io: std.Io) !void {
     try std.Io.File.writeStreamingAll(std.Io.File.stdout(), io, usage);
 }
 
-fn cmdServe(allocator: std.mem.Allocator, port: u16) !void {
+fn cmdServe(allocator: std.mem.Allocator, port: u16, verbose: bool) !void {
+    if (verbose) {
+        current_log_level = .debug;
+    }
+    const log = std.log.scoped(.main);
+    log.info("日志级别: {s} ({s})", .{ @tagName(current_log_level), if (verbose) "详细模式" else "静默模式" });
+
     var engine = try tsdb.Engine.init(allocator, "data");
     defer engine.deinit();
 
