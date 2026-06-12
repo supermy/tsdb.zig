@@ -2,6 +2,16 @@
 
 所有重要变更均记录于此文件，格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [Unreleased]
+
+### Added
+- **libevent 优化 HTTP 服务**：将 POSIX socket 阻塞式单连接模型替换为 libevent evhttp 事件驱动模型，支持高并发连接与 Keep-Alive。
+
+### Fixed
+- `handleHttpExport` 未加锁导致的数据竞争问题。
+- 查询响应缓冲区过小（512 字节）导致的栈溢出风险，扩容至 1536 字节。
+- URI 长度未校验导致的栈缓冲区溢出风险，限制最大 2048 字节。
+
 ## [0.2.0] - 2025-06-05
 
 ### Added

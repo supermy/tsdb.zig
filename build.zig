@@ -58,6 +58,9 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/include" });
     exe.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/lib" });
     exe.root_module.linkSystemLibrary("nng", .{});
+    exe.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/libevent/2.1.12_1/include" });
+    exe.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/libevent/2.1.12_1/lib" });
+    exe.root_module.linkSystemLibrary("event", .{});
     b.installArtifact(exe);
 
     // 运行命令
@@ -101,6 +104,9 @@ pub fn build(b: *std.Build) void {
     t_server.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/include" });
     t_server.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/nng/1.11/lib" });
     t_server.root_module.linkSystemLibrary("nng", .{});
+    t_server.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/libevent/2.1.12_1/include" });
+    t_server.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/libevent/2.1.12_1/lib" });
+    t_server.root_module.linkSystemLibrary("event", .{});
     test_step.dependOn(&b.addRunArtifact(t_server).step);
 
     const fs_helper_test_mod = b.createModule(.{
@@ -118,6 +124,9 @@ pub fn build(b: *std.Build) void {
     });
     http_server_test_mod.addImport("tsdb", tsdb_mod);
     const t_http_server = b.addTest(.{ .root_module = http_server_test_mod });
+    t_http_server.root_module.addIncludePath(.{ .cwd_relative = "/usr/local/Cellar/libevent/2.1.12_1/include" });
+    t_http_server.root_module.addLibraryPath(.{ .cwd_relative = "/usr/local/Cellar/libevent/2.1.12_1/lib" });
+    t_http_server.root_module.linkSystemLibrary("event", .{});
     test_step.dependOn(&b.addRunArtifact(t_http_server).step);
 
     const arrow_test_mod = b.createModule(.{

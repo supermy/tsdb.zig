@@ -256,7 +256,7 @@ TSDB.zig 提供可插拔的 GPU 加速抽象层，支持以下后端：
 │   ├── tsdb.zig           # 核心引擎：Engine、MemoryPartition、SeriesData
 │   ├── main.zig           # CLI 入口
 │   ├── server.zig         # NNG API Server + HTTP 测试页面服务
-│   ├── http_server.zig    # POSIX socket 极简 HTTP 服务器
+│   ├── http_server.zig    # libevent evhttp 高性能 HTTP 服务器
 │   ├── nng.zig            # NNG C 绑定
 │   ├── gpu_acceleration.zig # GPU 加速抽象层
 │   ├── compaction.zig     # 分区合并与去重
